@@ -1,2 +1,2 @@
-# helium-android-adapter-fyber
-Helium Android SDK Fyber adapter
+# helium-android-adapter-digital-turbine-exchange
+Helium Android SDK Digital Turbine Exchange adapter
