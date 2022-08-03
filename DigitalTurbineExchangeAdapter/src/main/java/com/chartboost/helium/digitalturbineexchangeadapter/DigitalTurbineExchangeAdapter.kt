@@ -77,6 +77,8 @@ class DigitalTurbineExchangeAdapter : PartnerAdapter {
      *
      * @param context The current [Context].
      * @param partnerConfiguration Configuration object containing relevant data to initialize Digital Turbine Exchange.
+     *
+     * @return Result.success() if Digital Turbine Exchange was initialized successfully, Result.failure() otherwise.
      */
     override suspend fun setUp(
         context: Context,
@@ -98,29 +100,61 @@ class DigitalTurbineExchangeAdapter : PartnerAdapter {
     }
 
     /**
-     * Determine the corresponding [Result] for a given Digital Turbine Exchange init status.
+     * Save the current GDPR applicability state for later use.
      *
-     * @param status The Digital Turbine Exchange init status.
-     *
-     * @return Result.success() if Digital Turbine Exchange was initialized successfully, Result.failure() otherwise.
+     * @param context The current [Context].
+     * @param gdprApplies True if GDPR applies, false otherwise.
      */
-    private fun getInitResult(status: OnFyberMarketplaceInitializedListener.FyberInitStatus): Result<Unit> {
-        return when (status) {
-            // Digital Turbine Exchange's failed init is recoverable. It will be re-attempted on
-            // the first ad request.
-            OnFyberMarketplaceInitializedListener.FyberInitStatus.SUCCESSFULLY,
-            OnFyberMarketplaceInitializedListener.FyberInitStatus.FAILED -> {
-                Result.success(LogController.i("$TAG Digital Turbine Exchange successfully initialized."))
-            }
-            OnFyberMarketplaceInitializedListener.FyberInitStatus.FAILED_NO_KITS_DETECTED -> {
-                LogController.e("$TAG Digital Turbine Exchange failed to initialize. No kits detected.")
-                Result.failure(HeliumAdException(HeliumErrorCode.PARTNER_SDK_NOT_INITIALIZED))
-            }
-            OnFyberMarketplaceInitializedListener.FyberInitStatus.INVALID_APP_ID -> {
-                LogController.e("$TAG Digital Turbine Exchange failed to initialize. Invalid app ID.")
-                Result.failure(HeliumAdException(HeliumErrorCode.PARTNER_SDK_NOT_INITIALIZED))
-            }
+    override fun setGdprApplies(context: Context, gdprApplies: Boolean) {
+        this.gdprApplies = gdprApplies
+    }
+
+    /**
+     * Notify Digital Turbine Exchange of the user's GDPR consent status, if applicable.
+     *
+     * @param context The current [Context].
+     * @param gdprConsentStatus The user's current GDPR consent status.
+     */
+    override fun setGdprConsentStatus(context: Context, gdprConsentStatus: GdprConsentStatus) {
+        if (gdprApplies) {
+            InneractiveAdManager.setGdprConsent(
+                gdprConsentStatus == GdprConsentStatus.GDPR_CONSENT_GRANTED,
+                InneractiveAdManager.GdprConsentSource.External
+            )
+        } else {
+            InneractiveAdManager.clearGdprConsentData()
         }
+    }
+
+    /**
+     * Notify Digital Turbine Exchange of the user's CCPA consent status, if applicable.
+     *
+     * @param context The current [Context].
+     * @param hasGivenCcpaConsent True if the user has given CCPA consent, false otherwise.
+     * @param privacyString The CCPA privacy string.
+     */
+    override fun setCcpaConsent(
+        context: Context,
+        hasGivenCcpaConsent: Boolean,
+        privacyString: String?
+    ) {
+        InneractiveAdManager.setUSPrivacyString(
+            if (hasGivenCcpaConsent) {
+                "1YN-"
+            } else {
+                "1YY-"
+            }
+        )
+    }
+
+    /**
+     * Notify Digital Turbine Exchange of the COPPA subjectivity.
+     *
+     * @param context The current [Context].
+     * @param isSubjectToCoppa True if the user is subject to COPPA, false otherwise.
+     */
+    override fun setUserSubjectToCoppa(context: Context, isSubjectToCoppa: Boolean) {
+        // Digital Turbine Exchange does not have an API for setting COPPA
     }
 
     /**
@@ -161,10 +195,77 @@ class DigitalTurbineExchangeAdapter : PartnerAdapter {
     }
 
     /**
+     * Attempt to show the currently loaded Digital Turbine Exchange ad.
+     *
+     * @param context The current [Context]
+     * @param partnerAd The [PartnerAd] object containing the ad to be shown.
+     *
+     * @return Result.success(PartnerAd) if the ad was successfully shown, Result.failure(Exception) otherwise.
+     */
+    override suspend fun show(context: Context, partnerAd: PartnerAd): Result<PartnerAd> {
+        val listener = listeners.remove(partnerAd.request.heliumPlacement)
+
+        return if (readyToShow(context, partnerAd.request.format, partnerAd.ad)) {
+            when (partnerAd.request.format) {
+                // Banner ads do not have a separate "show" mechanism.
+                AdFormat.BANNER -> Result.success(partnerAd)
+                AdFormat.INTERSTITIAL, AdFormat.REWARDED -> showFullscreenAd(
+                    context,
+                    partnerAd,
+                    listener
+                )
+            }
+        } else {
+            Result.failure(HeliumAdException(HeliumErrorCode.NO_FILL))
+        }
+    }
+
+    /**
+     * Discard unnecessary Digital Turbine Exchange ad objects and release resources.
+     *
+     * @param partnerAd The [PartnerAd] object containing the ad to be discarded.
+     *
+     * @return Result.success(PartnerAd) if the ad was successfully discarded, Result.failure(Exception) otherwise.
+     */
+    override suspend fun invalidate(partnerAd: PartnerAd): Result<PartnerAd> {
+        listeners.remove(partnerAd.request.heliumPlacement)
+        return destroyAd(partnerAd)
+    }
+
+    /**
+     * Determine the corresponding [Result] for a given Digital Turbine Exchange init status.
+     *
+     * @param status The Digital Turbine Exchange init status.
+     *
+     * @return Result.success() if Digital Turbine Exchange was initialized successfully, Result.failure() otherwise.
+     */
+    private fun getInitResult(status: OnFyberMarketplaceInitializedListener.FyberInitStatus): Result<Unit> {
+        return when (status) {
+            // Digital Turbine Exchange's failed init is recoverable. It will be re-attempted on
+            // the first ad request.
+            OnFyberMarketplaceInitializedListener.FyberInitStatus.SUCCESSFULLY,
+            OnFyberMarketplaceInitializedListener.FyberInitStatus.FAILED -> {
+                Result.success(LogController.i("$TAG Digital Turbine Exchange successfully initialized."))
+            }
+            OnFyberMarketplaceInitializedListener.FyberInitStatus.FAILED_NO_KITS_DETECTED -> {
+                LogController.e("$TAG Digital Turbine Exchange failed to initialize. No kits detected.")
+                Result.failure(HeliumAdException(HeliumErrorCode.PARTNER_SDK_NOT_INITIALIZED))
+            }
+            OnFyberMarketplaceInitializedListener.FyberInitStatus.INVALID_APP_ID -> {
+                LogController.e("$TAG Digital Turbine Exchange failed to initialize. Invalid app ID.")
+                Result.failure(HeliumAdException(HeliumErrorCode.PARTNER_SDK_NOT_INITIALIZED))
+            }
+        }
+    }
+
+    /**
      * Attempt to load a Digital Turbine Exchange banner ad.
      *
+     * @param context The current [Context].
      * @param request An [AdLoadRequest] instance containing relevant data for the current ad load call.
      * @param listener A [PartnerAdListener] to notify Helium of ad events.
+     *
+     * @return Result.success(PartnerAd) if the ad was successfully loaded, Result.failure(Exception) otherwise.
      */
     private suspend fun loadBannerAd(
         context: Context,
@@ -273,10 +374,22 @@ class DigitalTurbineExchangeAdapter : PartnerAdapter {
     }
 
     /**
+     * Digital Turbine Exchange needs a view to display the banner.
+     * https://developer.fyber.com/hc/en-us/articles/360019744297-Android-Ad-Formats
+     *
+     * @param context The current [Context].
+     * @param spot: The Digital Turbine Exchange ad spot (ad object).
+     */
+    private class BannerView(context: Context, val spot: InneractiveAdSpot) :
+        FrameLayout(context)
+
+    /**
      * Attempt to load a Digital Turbine Exchange fullscreen ad. This method supports both interstitial and rewarded ads.
      *
      * @param request An [AdLoadRequest] instance containing relevant data for the current ad load call.
      * @param listener A [PartnerAdListener] to notify Helium of ad events.
+     *
+     * @return Result.success(PartnerAd) if the ad was successfully loaded, Result.failure(Exception) otherwise.
      */
     private suspend fun loadFullscreenAd(
         request: AdLoadRequest,
@@ -325,28 +438,23 @@ class DigitalTurbineExchangeAdapter : PartnerAdapter {
     }
 
     /**
-     * Attempt to show the currently loaded Digital Turbine Exchange ad.
+     * Determine if a Digital Turbine Exchange ad is ready to show.
      *
-     * @param context The current [Context]
-     * @param partnerAd The [PartnerAd] object containing the ad to be shown.
+     * @param context The current [Context].
+     * @param format The format of the ad to be shown.
+     * @param ad The generic Digital Turbine Exchange ad object.
      *
-     * @return Result.success(PartnerAd) if the ad was successfully shown, Result.failure(Exception) otherwise.
+     * @return True if the ad is ready to show, false otherwise.
      */
-    override suspend fun show(context: Context, partnerAd: PartnerAd): Result<PartnerAd> {
-        val listener = listeners.remove(partnerAd.request.heliumPlacement)
-
-        return if (readyToShow(context, partnerAd.request.format, partnerAd.ad)) {
-            when (partnerAd.request.format) {
-                // Banner ads do not have a separate "show" mechanism.
-                AdFormat.BANNER -> Result.success(partnerAd)
-                AdFormat.INTERSTITIAL, AdFormat.REWARDED -> showFullscreenAd(
-                    context,
-                    partnerAd,
-                    listener
-                )
+    private fun readyToShow(context: Context, format: AdFormat, ad: Any?): Boolean {
+        return when {
+            context !is Activity -> {
+                LogController.e("$TAG Digital Turbine Exchange failed to show the fullscreen ad. Context is not an activity.")
+                false
             }
-        } else {
-            Result.failure(HeliumAdException(HeliumErrorCode.NO_FILL))
+            format == AdFormat.BANNER -> (ad is ViewGroup)
+            format == AdFormat.INTERSTITIAL || format == AdFormat.REWARDED -> (ad as InneractiveAdSpot).isReady
+            else -> false
         }
     }
 
@@ -356,6 +464,8 @@ class DigitalTurbineExchangeAdapter : PartnerAdapter {
      * @param context The current [Context].
      * @param partnerAd The [PartnerAd] object containing the Digital Turbine Exchange ad to be shown.
      * @param listener A [PartnerAdListener] to notify Helium of ad events.
+     *
+     * @return Result.success(PartnerAd) if the ad was successfully shown, Result.failure(Exception) otherwise.
      */
     private suspend fun showFullscreenAd(
         context: Context,
@@ -455,18 +565,6 @@ class DigitalTurbineExchangeAdapter : PartnerAdapter {
     }
 
     /**
-     * Discard unnecessary Digital Turbine Exchange ad objects and release resources.
-     *
-     * @param partnerAd The [PartnerAd] object containing the ad to be discarded.
-     *
-     * @return Result.success(PartnerAd) if the ad was successfully discarded, Result.failure(Exception) otherwise.
-     */
-    override suspend fun invalidate(partnerAd: PartnerAd): Result<PartnerAd> {
-        listeners.remove(partnerAd.request.heliumPlacement)
-        return destroyAd(partnerAd)
-    }
-
-    /**
      * Attempt to the destroy the current Digital Turbine Exchange ad.
      *
      * @param partnerAd The [PartnerAd] object containing the ad to be destroyed.
@@ -490,88 +588,4 @@ class DigitalTurbineExchangeAdapter : PartnerAdapter {
             Result.failure(HeliumAdException(HeliumErrorCode.INTERNAL))
         }
     }
-
-    /**
-     * Save the current GDPR applicability state for later use.
-     *
-     * @param context The current [Context].
-     * @param gdprApplies True if GDPR applies, false otherwise.
-     */
-    override fun setGdprApplies(context: Context, gdprApplies: Boolean) {
-        this.gdprApplies = gdprApplies
-    }
-
-    /**
-     * Notify Digital Turbine Exchange of the user's GDPR consent status, if applicable.
-     *
-     * @param context The current [Context].
-     * @param gdprConsentStatus The user's current GDPR consent status.
-     */
-    override fun setGdprConsentStatus(context: Context, gdprConsentStatus: GdprConsentStatus) {
-        if (gdprApplies) {
-            InneractiveAdManager.setGdprConsent(
-                gdprConsentStatus == GdprConsentStatus.GDPR_CONSENT_GRANTED,
-                InneractiveAdManager.GdprConsentSource.External
-            )
-        } else {
-            InneractiveAdManager.clearGdprConsentData()
-        }
-    }
-
-    /**
-     * Notify Digital Turbine Exchange of the user's CCPA consent status, if applicable.
-     *
-     * @param context The current [Context].
-     * @param hasGivenCcpaConsent True if the user has given CCPA consent, false otherwise.
-     * @param privacyString The CCPA privacy string.
-     */
-    override fun setCcpaConsent(
-        context: Context,
-        hasGivenCcpaConsent: Boolean,
-        privacyString: String?
-    ) {
-        InneractiveAdManager.setUSPrivacyString(
-            if (hasGivenCcpaConsent) {
-                "1YN-"
-            } else {
-                "1YY-"
-            }
-        )
-    }
-
-    /**
-     * Notify Digital Turbine Exchange of the COPPA subjectivity.
-     *
-     * @param context The current [Context].
-     * @param isSubjectToCoppa True if the user is subject to COPPA, false otherwise.
-     */
-    override fun setUserSubjectToCoppa(context: Context, isSubjectToCoppa: Boolean) {
-        // Digital Turbine Exchange does not have an API for setting COPPA
-    }
-
-    /**
-     * Determine if a Digital Turbine Exchange ad is available to show.
-     *
-     * @param context The current [Context].
-     * @param format The format of the ad to be shown.
-     * @param ad The generic Digital Turbine Exchange ad object.
-     */
-    private fun readyToShow(context: Context, format: AdFormat, ad: Any?): Boolean {
-        return when {
-            context !is Activity -> {
-                LogController.e("$TAG Digital Turbine Exchange failed to show the fullscreen ad. Context is not an activity.")
-                false
-            }
-            format == AdFormat.BANNER -> (ad is ViewGroup)
-            format == AdFormat.INTERSTITIAL || format == AdFormat.REWARDED -> (ad as InneractiveAdSpot).isReady
-            else -> false
-        }
-    }
-
-    /**
-     * Digital Turbine Exchange needs a view to display the banner.
-     * https://developer.fyber.com/hc/en-us/articles/360019744297-Android-Ad-Formats
-     */
-    private class BannerView(context: Context, val spot: InneractiveAdSpot) :
-        FrameLayout(context)
 }
