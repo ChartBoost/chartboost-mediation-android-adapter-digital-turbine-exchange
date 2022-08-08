@@ -29,7 +29,7 @@ class DigitalTurbineExchangeAdapter : PartnerAdapter {
         private const val APP_ID_KEY = "fyber_app_id"
 
         /**
-         *
+         * Key for identifying the Helium mediation platform to the partner.
          */
         private const val MEDIATOR_NAME = "Helium"
     }
@@ -138,13 +138,7 @@ class DigitalTurbineExchangeAdapter : PartnerAdapter {
         hasGivenCcpaConsent: Boolean,
         privacyString: String?
     ) {
-        InneractiveAdManager.setUSPrivacyString(
-            if (hasGivenCcpaConsent) {
-                "1YN-"
-            } else {
-                "1YY-"
-            }
-        )
+        InneractiveAdManager.setUSPrivacyString(privacyString)
     }
 
     /**
@@ -452,7 +446,7 @@ class DigitalTurbineExchangeAdapter : PartnerAdapter {
                 LogController.e("$TAG Digital Turbine Exchange failed to show the fullscreen ad. Context is not an activity.")
                 false
             }
-            format == AdFormat.BANNER -> (ad is ViewGroup)
+            format == AdFormat.BANNER -> (ad is BannerView)
             format == AdFormat.INTERSTITIAL || format == AdFormat.REWARDED -> (ad as InneractiveAdSpot).isReady
             else -> false
         }
@@ -472,10 +466,11 @@ class DigitalTurbineExchangeAdapter : PartnerAdapter {
         partnerAd: PartnerAd,
         listener: PartnerAdListener?
     ): Result<PartnerAd> {
-        return suspendCoroutine { continuation ->
-            partnerAd.ad?.let {
-                val controller = (it as InneractiveAdSpot).selectedUnitController
-                        as InneractiveFullscreenUnitController
+        (partnerAd.ad as? InneractiveAdSpot)?.let { adSpot ->
+            val controller = adSpot.selectedUnitController as? InneractiveFullscreenUnitController
+                ?: return Result.failure(HeliumAdException(HeliumErrorCode.PARTNER_ERROR))
+
+            return suspendCoroutine { continuation ->
                 controller.eventsListener = object : InneractiveFullscreenAdEventsListener {
                     override fun onAdImpression(ad: InneractiveAdSpot) {
                         listener?.onPartnerAdImpression(
@@ -557,10 +552,10 @@ class DigitalTurbineExchangeAdapter : PartnerAdapter {
                 }
 
                 controller.show(context as Activity)
-            } ?: run {
-                LogController.e("$TAG Digital Turbine Exchange failed to show the fullscreen ad. Ad is null.")
-                continuation.resume(Result.failure(HeliumAdException(HeliumErrorCode.INTERNAL)))
             }
+        } ?: run {
+            LogController.e("$TAG Digital Turbine Exchange failed to show the fullscreen ad. Ad is not an InneractiveAdSpot.")
+            return Result.failure(HeliumAdException(HeliumErrorCode.INTERNAL))
         }
     }
 
@@ -579,6 +574,13 @@ class DigitalTurbineExchangeAdapter : PartnerAdapter {
                 }
                 is InneractiveAdSpot -> {
                     it.destroy()
+                }
+                else -> {
+                    LogController.e(
+                        "$TAG Digital Turbine Exchange failed to destroy the ad. Ad " +
+                                "is neither a BannerView nor an InneractiveAdSpot."
+                    )
+                    return Result.failure(HeliumAdException(HeliumErrorCode.INTERNAL))
                 }
             }
 
