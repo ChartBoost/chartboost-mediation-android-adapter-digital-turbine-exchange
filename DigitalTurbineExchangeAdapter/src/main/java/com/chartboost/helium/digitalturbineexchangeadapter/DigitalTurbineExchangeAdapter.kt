@@ -199,18 +199,14 @@ class DigitalTurbineExchangeAdapter : PartnerAdapter {
     override suspend fun show(context: Context, partnerAd: PartnerAd): Result<PartnerAd> {
         val listener = listeners.remove(partnerAd.request.heliumPlacement)
 
-        return if (readyToShow(context, partnerAd.request.format, partnerAd.ad)) {
-            when (partnerAd.request.format) {
-                // Banner ads do not have a separate "show" mechanism.
-                AdFormat.BANNER -> Result.success(partnerAd)
-                AdFormat.INTERSTITIAL, AdFormat.REWARDED -> showFullscreenAd(
-                    context,
-                    partnerAd,
-                    listener
-                )
-            }
-        } else {
-            Result.failure(HeliumAdException(HeliumErrorCode.NO_FILL))
+        return when (partnerAd.request.format) {
+            // Banner ads do not have a separate "show" mechanism.
+            AdFormat.BANNER -> Result.success(partnerAd)
+            AdFormat.INTERSTITIAL, AdFormat.REWARDED -> showFullscreenAd(
+                context,
+                partnerAd,
+                listener
+            )
         }
     }
 
@@ -293,8 +289,6 @@ class DigitalTurbineExchangeAdapter : PartnerAdapter {
                                 ad?.selectedUnitController as InneractiveAdViewUnitController
                             val bannerView = BannerView(context, adSpot)
 
-                            controller.bindView(bannerView)
-
                             // TODO: [HB-4292] Recheck InneractiveAdViewEventsListener. None of these callbacks work.
                             controller.eventsListener = object : InneractiveAdViewEventsListener {
                                 override fun onAdImpression(ad: InneractiveAdSpot?) {
@@ -342,6 +336,8 @@ class DigitalTurbineExchangeAdapter : PartnerAdapter {
                                 override fun onAdCollapsed(ad: InneractiveAdSpot?) {
                                 }
                             }
+
+                            controller.bindView(bannerView)
 
                             Result.success(
                                 PartnerAd(
@@ -466,6 +462,11 @@ class DigitalTurbineExchangeAdapter : PartnerAdapter {
         partnerAd: PartnerAd,
         listener: PartnerAdListener?
     ): Result<PartnerAd> {
+        if (!readyToShow(context, partnerAd.request.format, partnerAd.ad)) {
+            LogController.e("$TAG Digital Turbine Exchange failed to show the fullscreen ad. Ad is not ready.")
+            return Result.failure(HeliumAdException(HeliumErrorCode.NO_FILL))
+        }
+
         (partnerAd.ad as? InneractiveAdSpot)?.let { adSpot ->
             val controller = adSpot.selectedUnitController as? InneractiveFullscreenUnitController
                 ?: return Result.failure(HeliumAdException(HeliumErrorCode.PARTNER_ERROR))
