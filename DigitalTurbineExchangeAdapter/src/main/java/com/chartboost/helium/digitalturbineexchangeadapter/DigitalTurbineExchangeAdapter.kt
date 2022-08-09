@@ -289,7 +289,6 @@ class DigitalTurbineExchangeAdapter : PartnerAdapter {
                                 ad?.selectedUnitController as InneractiveAdViewUnitController
                             val bannerView = BannerView(context, adSpot)
 
-                            // TODO: [HB-4292] Recheck InneractiveAdViewEventsListener. None of these callbacks work.
                             controller.eventsListener = object : InneractiveAdViewEventsListener {
                                 override fun onAdImpression(ad: InneractiveAdSpot?) {
                                     listener.onPartnerAdImpression(
