@@ -36,28 +36,26 @@ class DigitalTurbineExchangeAdapter : PartnerAdapter {
             }
 
         /**
-         * Log level that can optionally be set to output logs matching Android's [Log] levels.
+         * Set Digital Turbine Exchange's log level.
+         *
+         * @param level The log level to set. Must be one of the constants in Android's [Log] class.
          */
-        public var logLevel: Int? = null
-            set(value) {
-                value?.let {
-                    field = it
-                    InneractiveAdManager.setLogLevel(it)
-                    LogController.d(
-                        "Digital Turbine Exchange log level set to ${
-                            when (it) {
-                                Log.VERBOSE -> "Log.VERBOSE"
-                                Log.DEBUG -> "Log.DEBUG"
-                                Log.INFO -> "Log.INFO"
-                                Log.WARN -> "Log.WARN"
-                                Log.ERROR -> "Log.ERROR"
-                                Log.ASSERT -> "Log.ASSERT"
-                                else -> "UNKNOWN"
-                            }
-                        }."
-                    )
-                }
-            }
+        public fun setLogLevel(level: Int) {
+            InneractiveAdManager.setLogLevel(level)
+            LogController.d(
+                "Digital Turbine Exchange log level set to ${
+                    when (level) {
+                        Log.VERBOSE -> "Log.VERBOSE"
+                        Log.DEBUG -> "Log.DEBUG"
+                        Log.INFO -> "Log.INFO"
+                        Log.WARN -> "Log.WARN"
+                        Log.ERROR -> "Log.ERROR"
+                        Log.ASSERT -> "Log.ASSERT"
+                        else -> "UNKNOWN"
+                    }
+                }."
+            )
+        }
 
         /**
          * The tag used for log messages.
