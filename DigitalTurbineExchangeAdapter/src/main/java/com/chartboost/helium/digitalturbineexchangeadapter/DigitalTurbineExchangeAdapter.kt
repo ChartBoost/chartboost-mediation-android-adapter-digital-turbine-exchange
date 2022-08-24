@@ -2,6 +2,7 @@ package com.chartboost.helium.digitalturbineexchangeadapter
 
 import android.app.Activity
 import android.content.Context
+import android.util.Log
 import android.view.ViewGroup
 import android.widget.FrameLayout
 import com.chartboost.heliumsdk.BuildConfig.HELIUM_VERSION
@@ -18,6 +19,46 @@ import kotlin.coroutines.suspendCoroutine
  */
 class DigitalTurbineExchangeAdapter : PartnerAdapter {
     companion object {
+        /**
+         * Flag that can optionally be set to mute video creatives served by Digital Turbine Exchange.
+         */
+        public var mute = false
+            set(value) {
+                field = value
+                InneractiveAdManager.setMuteVideo(value)
+                LogController.d(
+                    "Digital Turbine Exchange video creatives will be " +
+                            "${
+                                if (value) "muted"
+                                else "unmuted"
+                            }."
+                )
+            }
+
+        /**
+         * Log level that can optionally be set to output logs matching Android's [Log] levels.
+         */
+        public var logLevel: Int? = null
+            set(value) {
+                value?.let {
+                    field = value
+                    InneractiveAdManager.setLogLevel(it)
+                    LogController.d(
+                        "Digital Turbine Exchange log level set to ${
+                            when (it) {
+                                Log.VERBOSE -> "Log.VERBOSE"
+                                Log.DEBUG -> "Log.DEBUG"
+                                Log.INFO -> "Log.INFO"
+                                Log.WARN -> "Log.WARN"
+                                Log.ERROR -> "Log.ERROR"
+                                Log.ASSERT -> "Log.ASSERT"
+                                else -> "UNKNOWN"
+                            }
+                        }."
+                    )
+                }
+            }
+
         /**
          * The tag used for log messages.
          */
