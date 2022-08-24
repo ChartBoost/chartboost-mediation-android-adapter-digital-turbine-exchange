@@ -41,7 +41,7 @@ class DigitalTurbineExchangeAdapter : PartnerAdapter {
         public var logLevel: Int? = null
             set(value) {
                 value?.let {
-                    field = value
+                    field = it
                     InneractiveAdManager.setLogLevel(it)
                     LogController.d(
                         "Digital Turbine Exchange log level set to ${
