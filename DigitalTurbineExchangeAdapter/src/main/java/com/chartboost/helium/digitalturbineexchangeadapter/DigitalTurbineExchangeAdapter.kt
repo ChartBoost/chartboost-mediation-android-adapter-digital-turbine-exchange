@@ -58,11 +58,6 @@ class DigitalTurbineExchangeAdapter : PartnerAdapter {
         }
 
         /**
-         * The tag used for log messages.
-         */
-        private val TAG = "[${this::class.java.simpleName}]"
-
-        /**
          * Key for parsing the Digital Turbine Exchange app ID.
          */
         private const val APP_ID_KEY = "fyber_app_id"
@@ -132,7 +127,7 @@ class DigitalTurbineExchangeAdapter : PartnerAdapter {
                     continuation.resume(getInitResult(status))
                 }
             } ?: run {
-                LogController.e("$TAG Digital Turbine Exchange failed to initialize. Missing app ID.")
+                LogController.e("Digital Turbine Exchange failed to initialize. Missing app ID.")
                 continuation.resume(Result.failure(HeliumAdException(HeliumErrorCode.PARTNER_SDK_NOT_INITIALIZED)))
             }
         }
@@ -274,14 +269,14 @@ class DigitalTurbineExchangeAdapter : PartnerAdapter {
             // the first ad request.
             OnFyberMarketplaceInitializedListener.FyberInitStatus.SUCCESSFULLY,
             OnFyberMarketplaceInitializedListener.FyberInitStatus.FAILED -> {
-                Result.success(LogController.i("$TAG Digital Turbine Exchange successfully initialized."))
+                Result.success(LogController.i("Digital Turbine Exchange successfully initialized."))
             }
             OnFyberMarketplaceInitializedListener.FyberInitStatus.FAILED_NO_KITS_DETECTED -> {
-                LogController.e("$TAG Digital Turbine Exchange failed to initialize. No kits detected.")
+                LogController.e("Digital Turbine Exchange failed to initialize. No kits detected.")
                 Result.failure(HeliumAdException(HeliumErrorCode.PARTNER_SDK_NOT_INITIALIZED))
             }
             OnFyberMarketplaceInitializedListener.FyberInitStatus.INVALID_APP_ID -> {
-                LogController.e("$TAG Digital Turbine Exchange failed to initialize. Invalid app ID.")
+                LogController.e("Digital Turbine Exchange failed to initialize. Invalid app ID.")
                 Result.failure(HeliumAdException(HeliumErrorCode.PARTNER_SDK_NOT_INITIALIZED))
             }
         }
@@ -314,7 +309,7 @@ class DigitalTurbineExchangeAdapter : PartnerAdapter {
                     continuation.resume(
                         if (ad != adSpot) {
                             LogController.e(
-                                "$TAG Digital Turbine Exchange returned an ad for a different ad spot: $ad. " +
+                                "Digital Turbine Exchange returned an ad for a different ad spot: $ad. " +
                                         "Failing ad request."
                             )
 
@@ -360,7 +355,7 @@ class DigitalTurbineExchangeAdapter : PartnerAdapter {
                                     error: AdDisplayError?
                                 ) {
                                     LogController.e(
-                                        "$TAG Digital Turbine Exchange failed to show the banner ad. " +
+                                        "Digital Turbine Exchange failed to show the banner ad. " +
                                                 "Error: $error"
                                     )
                                 }
@@ -392,7 +387,7 @@ class DigitalTurbineExchangeAdapter : PartnerAdapter {
                     adSpot: InneractiveAdSpot?,
                     errorCode: InneractiveErrorCode?
                 ) {
-                    LogController.e("$TAG Digital Turbine Exchange failed to load a banner ad. Error code: $errorCode")
+                    LogController.e("Digital Turbine Exchange failed to load a banner ad. Error code: $errorCode")
                     continuation.resume(Result.failure(HeliumAdException(HeliumErrorCode.NO_FILL)))
                 }
             })
@@ -454,7 +449,7 @@ class DigitalTurbineExchangeAdapter : PartnerAdapter {
                     errorCode: InneractiveErrorCode
                 ) {
                     LogController.e(
-                        "$TAG Digital Turbine Exchange failed to load a fullscreen ad for ad spot $adSpot. " +
+                        "Digital Turbine Exchange failed to load a fullscreen ad for ad spot $adSpot. " +
                                 "Error code: $errorCode"
                     )
                     continuation.resume(Result.failure(HeliumAdException(HeliumErrorCode.NO_FILL)))
@@ -477,7 +472,7 @@ class DigitalTurbineExchangeAdapter : PartnerAdapter {
     private fun readyToShow(context: Context, format: AdFormat, ad: Any?): Boolean {
         return when {
             context !is Activity -> {
-                LogController.e("$TAG Digital Turbine Exchange failed to show the fullscreen ad. Context is not an activity.")
+                LogController.e("Digital Turbine Exchange failed to show the fullscreen ad. Context is not an activity.")
                 false
             }
             format == AdFormat.BANNER -> (ad is BannerView)
@@ -501,7 +496,7 @@ class DigitalTurbineExchangeAdapter : PartnerAdapter {
         listener: PartnerAdListener?
     ): Result<PartnerAd> {
         if (!readyToShow(context, partnerAd.request.format, partnerAd.ad)) {
-            LogController.e("$TAG Digital Turbine Exchange failed to show the fullscreen ad. Ad is not ready.")
+            LogController.e("Digital Turbine Exchange failed to show the fullscreen ad. Ad is not ready.")
             return Result.failure(HeliumAdException(HeliumErrorCode.NO_FILL))
         }
 
@@ -519,7 +514,7 @@ class DigitalTurbineExchangeAdapter : PartnerAdapter {
                                 request = partnerAd.request
                             )
                         ) ?: LogController.e(
-                            "$TAG Unable to fire onPartnerAdImpression for Digital Turbine Exchange " +
+                            "Unable to fire onPartnerAdImpression for Digital Turbine Exchange " +
                                     "adapter. Listener is null"
                         )
 
@@ -542,7 +537,7 @@ class DigitalTurbineExchangeAdapter : PartnerAdapter {
                                 request = partnerAd.request
                             )
                         ) ?: LogController.e(
-                            "$TAG Unable to fire onPartnerAdClicked for Digital Turbine Exchange " +
+                            "Unable to fire onPartnerAdClicked for Digital Turbine Exchange " +
                                     "adapter. Listener is null."
                         )
                     }
@@ -558,7 +553,7 @@ class DigitalTurbineExchangeAdapter : PartnerAdapter {
                         error: AdDisplayError
                     ) {
                         LogController.e(
-                            "$TAG Digital Turbine Exchange failed to show the fullscreen ad. Error: $error"
+                            "Digital Turbine Exchange failed to show the fullscreen ad. Error: $error"
                         )
                         continuation.resume(Result.failure(HeliumAdException(HeliumErrorCode.NO_FILL)))
 
@@ -573,7 +568,7 @@ class DigitalTurbineExchangeAdapter : PartnerAdapter {
                                 request = partnerAd.request
                             ), null
                         ) ?: LogController.e(
-                            "$TAG Unable to fire onPartnerAdDismissed for Digital Turbine Exchange adapter. Listener " +
+                            "Unable to fire onPartnerAdDismissed for Digital Turbine Exchange adapter. Listener " +
                                     "is null."
                         )
 
@@ -585,7 +580,7 @@ class DigitalTurbineExchangeAdapter : PartnerAdapter {
                     listener?.onPartnerAdRewarded(
                         partnerAd, Reward(0, "")
                     ) ?: LogController.e(
-                        "$TAG Unable to fire onPartnerAdRewarded for Digital Turbine Exchange adapter. Listener " +
+                        "Unable to fire onPartnerAdRewarded for Digital Turbine Exchange adapter. Listener " +
                                 "is null."
                     )
                 }
@@ -593,7 +588,7 @@ class DigitalTurbineExchangeAdapter : PartnerAdapter {
                 controller.show(context as Activity)
             }
         } ?: run {
-            LogController.e("$TAG Digital Turbine Exchange failed to show the fullscreen ad. Ad is not an InneractiveAdSpot.")
+            LogController.e("Digital Turbine Exchange failed to show the fullscreen ad. Ad is not an InneractiveAdSpot.")
             return Result.failure(HeliumAdException(HeliumErrorCode.INTERNAL))
         }
     }
@@ -616,7 +611,7 @@ class DigitalTurbineExchangeAdapter : PartnerAdapter {
                 }
                 else -> {
                     LogController.e(
-                        "$TAG Digital Turbine Exchange failed to destroy the ad. Ad " +
+                        "Digital Turbine Exchange failed to destroy the ad. Ad " +
                                 "is neither a BannerView nor an InneractiveAdSpot."
                     )
                     return Result.failure(HeliumAdException(HeliumErrorCode.INTERNAL))
@@ -625,7 +620,7 @@ class DigitalTurbineExchangeAdapter : PartnerAdapter {
 
             Result.success(partnerAd)
         } ?: run {
-            LogController.e("$TAG Digital Turbine Exchange failed to destroy the ${partnerAd.request.format} ad. Ad is null.")
+            LogController.e("Digital Turbine Exchange failed to destroy the ${partnerAd.request.format} ad. Ad is null.")
             Result.failure(HeliumAdException(HeliumErrorCode.INTERNAL))
         }
     }
