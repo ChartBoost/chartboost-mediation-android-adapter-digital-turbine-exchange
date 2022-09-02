@@ -3,7 +3,6 @@ package com.chartboost.helium.digitalturbineexchangeadapter
 import android.app.Activity
 import android.content.Context
 import android.util.Log
-import android.view.ViewGroup
 import android.widget.FrameLayout
 import com.chartboost.heliumsdk.BuildConfig.HELIUM_VERSION
 import com.chartboost.heliumsdk.domain.*
