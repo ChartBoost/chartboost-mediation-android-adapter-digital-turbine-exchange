@@ -6,7 +6,10 @@ import android.util.Log
 import android.widget.FrameLayout
 import com.chartboost.heliumsdk.BuildConfig.HELIUM_VERSION
 import com.chartboost.heliumsdk.domain.*
-import com.chartboost.heliumsdk.utils.LogController
+import com.chartboost.heliumsdk.utils.PartnerLogController
+import com.chartboost.heliumsdk.utils.PartnerLogController.PartnerAdapterEvents.*
+import com.chartboost.heliumsdk.utils.PartnerLogController.PartnerAdapterFailureEvents.*
+import com.chartboost.heliumsdk.utils.PartnerLogController.PartnerAdapterSuccessEvents.*
 import com.fyber.inneractive.sdk.external.*
 import com.fyber.inneractive.sdk.external.InneractiveAdSpot.RequestListener
 import com.fyber.inneractive.sdk.external.InneractiveUnitController.AdDisplayError
@@ -25,7 +28,8 @@ class DigitalTurbineExchangeAdapter : PartnerAdapter {
             set(value) {
                 field = value
                 InneractiveAdManager.setMuteVideo(value)
-                LogController.d(
+                PartnerLogController.log(
+                    CUSTOM,
                     "Digital Turbine Exchange video creatives will be " +
                             "${
                                 if (value) "muted"
@@ -41,7 +45,8 @@ class DigitalTurbineExchangeAdapter : PartnerAdapter {
          */
         public fun setLogLevel(level: Int) {
             InneractiveAdManager.setLogLevel(level)
-            LogController.d(
+            PartnerLogController.log(
+                CUSTOM,
                 "Digital Turbine Exchange log level set to ${
                     when (level) {
                         Log.VERBOSE -> "Log.VERBOSE"
@@ -117,6 +122,8 @@ class DigitalTurbineExchangeAdapter : PartnerAdapter {
         context: Context,
         partnerConfiguration: PartnerConfiguration
     ): Result<Unit> {
+        PartnerLogController.log(SETUP_STARTED)
+
         return suspendCoroutine { continuation ->
             partnerConfiguration.credentials[APP_ID_KEY]?.let { appId ->
                 InneractiveAdManager.initialize(
@@ -126,7 +133,7 @@ class DigitalTurbineExchangeAdapter : PartnerAdapter {
                     continuation.resume(getInitResult(status))
                 }
             } ?: run {
-                LogController.e("Digital Turbine Exchange failed to initialize. Missing app ID.")
+                PartnerLogController.log(SETUP_FAILED, "Missing app ID.")
                 continuation.resume(Result.failure(HeliumAdException(HeliumErrorCode.PARTNER_SDK_NOT_INITIALIZED)))
             }
         }
@@ -195,22 +202,28 @@ class DigitalTurbineExchangeAdapter : PartnerAdapter {
     override suspend fun fetchBidderInformation(
         context: Context,
         request: PreBidRequest
-    ) = emptyMap<String, String>()
+    ): Map<String, String> {
+        PartnerLogController.log(BIDDER_INFO_FETCH_STARTED)
+        PartnerLogController.log(BIDDER_INFO_FETCH_SUCCEEDED)
+        return emptyMap()
+    }
 
     /**
      * Attempt to load a Digital Turbine Exchange ad.
      *
      * @param context The current [Context].
-     * @param request An [AdLoadRequest] instance containing relevant data for the current ad load call.
+     * @param request An [PartnerAdLoadRequest] instance containing relevant data for the current ad load call.
      * @param partnerAdListener A [PartnerAdListener] to notify Helium of ad events.
      *
      * @return Result.success(PartnerAd) if the ad was successfully loaded, Result.failure(Exception) otherwise.
      */
     override suspend fun load(
         context: Context,
-        request: AdLoadRequest,
+        request: PartnerAdLoadRequest,
         partnerAdListener: PartnerAdListener
     ): Result<PartnerAd> {
+        PartnerLogController.log(LOAD_STARTED)
+
         return when (request.format) {
             AdFormat.BANNER -> {
                 loadBannerAd(context, request, partnerAdListener)
@@ -230,11 +243,15 @@ class DigitalTurbineExchangeAdapter : PartnerAdapter {
      * @return Result.success(PartnerAd) if the ad was successfully shown, Result.failure(Exception) otherwise.
      */
     override suspend fun show(context: Context, partnerAd: PartnerAd): Result<PartnerAd> {
+        PartnerLogController.log(SHOW_STARTED)
         val listener = listeners.remove(partnerAd.request.heliumPlacement)
 
         return when (partnerAd.request.format) {
             // Banner ads do not have a separate "show" mechanism.
-            AdFormat.BANNER -> Result.success(partnerAd)
+            AdFormat.BANNER -> {
+                PartnerLogController.log(SHOW_SUCCEEDED)
+                Result.success(partnerAd)
+            }
             AdFormat.INTERSTITIAL, AdFormat.REWARDED -> showFullscreenAd(
                 context,
                 partnerAd,
@@ -251,6 +268,8 @@ class DigitalTurbineExchangeAdapter : PartnerAdapter {
      * @return Result.success(PartnerAd) if the ad was successfully discarded, Result.failure(Exception) otherwise.
      */
     override suspend fun invalidate(partnerAd: PartnerAd): Result<PartnerAd> {
+        PartnerLogController.log(INVALIDATE_STARTED)
+
         listeners.remove(partnerAd.request.heliumPlacement)
         return destroyAd(partnerAd)
     }
@@ -268,14 +287,14 @@ class DigitalTurbineExchangeAdapter : PartnerAdapter {
             // the first ad request.
             OnFyberMarketplaceInitializedListener.FyberInitStatus.SUCCESSFULLY,
             OnFyberMarketplaceInitializedListener.FyberInitStatus.FAILED -> {
-                Result.success(LogController.i("Digital Turbine Exchange successfully initialized."))
+                Result.success(PartnerLogController.log(SETUP_SUCCEEDED))
             }
             OnFyberMarketplaceInitializedListener.FyberInitStatus.FAILED_NO_KITS_DETECTED -> {
-                LogController.e("Digital Turbine Exchange failed to initialize. No kits detected.")
+                PartnerLogController.log(SETUP_FAILED, "No kits detected.")
                 Result.failure(HeliumAdException(HeliumErrorCode.PARTNER_SDK_NOT_INITIALIZED))
             }
             OnFyberMarketplaceInitializedListener.FyberInitStatus.INVALID_APP_ID -> {
-                LogController.e("Digital Turbine Exchange failed to initialize. Invalid app ID.")
+                PartnerLogController.log(SETUP_FAILED, "Invalid app ID.")
                 Result.failure(HeliumAdException(HeliumErrorCode.PARTNER_SDK_NOT_INITIALIZED))
             }
         }
@@ -285,14 +304,14 @@ class DigitalTurbineExchangeAdapter : PartnerAdapter {
      * Attempt to load a Digital Turbine Exchange banner ad.
      *
      * @param context The current [Context].
-     * @param request An [AdLoadRequest] instance containing relevant data for the current ad load call.
+     * @param request An [PartnerAdLoadRequest] instance containing relevant data for the current ad load call.
      * @param listener A [PartnerAdListener] to notify Helium of ad events.
      *
      * @return Result.success(PartnerAd) if the ad was successfully loaded, Result.failure(Exception) otherwise.
      */
     private suspend fun loadBannerAd(
         context: Context,
-        request: AdLoadRequest,
+        request: PartnerAdLoadRequest,
         listener: PartnerAdListener
     ): Result<PartnerAd> {
         val adSpot = InneractiveAdSpotManager.get().createSpot()
@@ -307,9 +326,9 @@ class DigitalTurbineExchangeAdapter : PartnerAdapter {
                 override fun onInneractiveSuccessfulAdRequest(ad: InneractiveAdSpot?) {
                     continuation.resume(
                         if (ad != adSpot) {
-                            LogController.e(
-                                "Digital Turbine Exchange returned an ad for a different ad spot: $ad. " +
-                                        "Failing ad request."
+                            PartnerLogController.log(
+                                LOAD_FAILED,
+                                "Digital Turbine Exchange returned an ad for a different ad spot: $ad."
                             )
 
                             Result.failure(
@@ -324,6 +343,7 @@ class DigitalTurbineExchangeAdapter : PartnerAdapter {
 
                             controller.eventsListener = object : InneractiveAdViewEventsListener {
                                 override fun onAdImpression(ad: InneractiveAdSpot?) {
+                                    PartnerLogController.log(DID_TRACK_IMPRESSION)
                                     listener.onPartnerAdImpression(
                                         PartnerAd(
                                             ad = ad,
@@ -334,6 +354,7 @@ class DigitalTurbineExchangeAdapter : PartnerAdapter {
                                 }
 
                                 override fun onAdClicked(ad: InneractiveAdSpot?) {
+                                    PartnerLogController.log(DID_CLICK)
                                     listener.onPartnerAdClicked(
                                         PartnerAd(
                                             ad = ad,
@@ -353,10 +374,7 @@ class DigitalTurbineExchangeAdapter : PartnerAdapter {
                                     ad: InneractiveAdSpot?,
                                     error: AdDisplayError?
                                 ) {
-                                    LogController.e(
-                                        "Digital Turbine Exchange failed to show the banner ad. " +
-                                                "Error: $error"
-                                    )
+                                    PartnerLogController.log(SHOW_FAILED, "Error: $error")
                                 }
 
                                 override fun onAdExpanded(ad: InneractiveAdSpot?) {
@@ -371,6 +389,7 @@ class DigitalTurbineExchangeAdapter : PartnerAdapter {
 
                             controller.bindView(bannerView)
 
+                            PartnerLogController.log(LOAD_SUCCEEDED)
                             Result.success(
                                 PartnerAd(
                                     ad = bannerView,
@@ -386,7 +405,7 @@ class DigitalTurbineExchangeAdapter : PartnerAdapter {
                     adSpot: InneractiveAdSpot?,
                     errorCode: InneractiveErrorCode?
                 ) {
-                    LogController.e("Digital Turbine Exchange failed to load a banner ad. Error code: $errorCode")
+                    PartnerLogController.log(LOAD_FAILED, "$errorCode")
                     continuation.resume(Result.failure(HeliumAdException(HeliumErrorCode.NO_FILL)))
                 }
             })
@@ -408,13 +427,13 @@ class DigitalTurbineExchangeAdapter : PartnerAdapter {
     /**
      * Attempt to load a Digital Turbine Exchange fullscreen ad. This method supports both interstitial and rewarded ads.
      *
-     * @param request An [AdLoadRequest] instance containing relevant data for the current ad load call.
+     * @param request An [PartnerAdLoadRequest] instance containing relevant data for the current ad load call.
      * @param listener A [PartnerAdListener] to notify Helium of ad events.
      *
      * @return Result.success(PartnerAd) if the ad was successfully loaded, Result.failure(Exception) otherwise.
      */
     private suspend fun loadFullscreenAd(
-        request: AdLoadRequest,
+        request: PartnerAdLoadRequest,
         listener: PartnerAdListener
     ): Result<PartnerAd> {
         // Save the listener for later use.
@@ -432,6 +451,7 @@ class DigitalTurbineExchangeAdapter : PartnerAdapter {
         return suspendCoroutine { continuation ->
             videoSpot.setRequestListener(object : RequestListener {
                 override fun onInneractiveSuccessfulAdRequest(adSpot: InneractiveAdSpot) {
+                    PartnerLogController.log(LOAD_SUCCEEDED)
                     continuation.resume(
                         Result.success(
                             PartnerAd(
@@ -447,10 +467,7 @@ class DigitalTurbineExchangeAdapter : PartnerAdapter {
                     adSpot: InneractiveAdSpot,
                     errorCode: InneractiveErrorCode
                 ) {
-                    LogController.e(
-                        "Digital Turbine Exchange failed to load a fullscreen ad for ad spot $adSpot. " +
-                                "Error code: $errorCode"
-                    )
+                    PartnerLogController.log(LOAD_FAILED, "Ad spot $adSpot. Error code: $errorCode")
                     continuation.resume(Result.failure(HeliumAdException(HeliumErrorCode.NO_FILL)))
                 }
             })
@@ -471,7 +488,7 @@ class DigitalTurbineExchangeAdapter : PartnerAdapter {
     private fun readyToShow(context: Context, format: AdFormat, ad: Any?): Boolean {
         return when {
             context !is Activity -> {
-                LogController.e("Digital Turbine Exchange failed to show the fullscreen ad. Context is not an activity.")
+                PartnerLogController.log(SHOW_FAILED, "Context is not an activity.")
                 false
             }
             format == AdFormat.BANNER -> (ad is BannerView)
@@ -495,7 +512,7 @@ class DigitalTurbineExchangeAdapter : PartnerAdapter {
         listener: PartnerAdListener?
     ): Result<PartnerAd> {
         if (!readyToShow(context, partnerAd.request.format, partnerAd.ad)) {
-            LogController.e("Digital Turbine Exchange failed to show the fullscreen ad. Ad is not ready.")
+            PartnerLogController.log(SHOW_FAILED, "Ad is not ready.")
             return Result.failure(HeliumAdException(HeliumErrorCode.NO_FILL))
         }
 
@@ -506,17 +523,20 @@ class DigitalTurbineExchangeAdapter : PartnerAdapter {
             return suspendCoroutine { continuation ->
                 controller.eventsListener = object : InneractiveFullscreenAdEventsListener {
                     override fun onAdImpression(ad: InneractiveAdSpot) {
+                        PartnerLogController.log(DID_TRACK_IMPRESSION)
                         listener?.onPartnerAdImpression(
                             PartnerAd(
                                 ad = ad,
                                 details = emptyMap(),
                                 request = partnerAd.request
                             )
-                        ) ?: LogController.e(
+                        ) ?: PartnerLogController.log(
+                            CUSTOM,
                             "Unable to fire onPartnerAdImpression for Digital Turbine Exchange " +
                                     "adapter. Listener is null"
                         )
 
+                        PartnerLogController.log(SHOW_SUCCEEDED)
                         continuation.resume(
                             Result.success(
                                 PartnerAd(
@@ -529,13 +549,15 @@ class DigitalTurbineExchangeAdapter : PartnerAdapter {
                     }
 
                     override fun onAdClicked(ad: InneractiveAdSpot) {
+                        PartnerLogController.log(DID_CLICK)
                         listener?.onPartnerAdClicked(
                             PartnerAd(
                                 ad = ad,
                                 details = emptyMap(),
                                 request = partnerAd.request
                             )
-                        ) ?: LogController.e(
+                        ) ?: PartnerLogController.log(
+                            CUSTOM,
                             "Unable to fire onPartnerAdClicked for Digital Turbine Exchange " +
                                     "adapter. Listener is null."
                         )
@@ -551,22 +573,22 @@ class DigitalTurbineExchangeAdapter : PartnerAdapter {
                         ad: InneractiveAdSpot,
                         error: AdDisplayError
                     ) {
-                        LogController.e(
-                            "Digital Turbine Exchange failed to show the fullscreen ad. Error: $error"
-                        )
+                        PartnerLogController.log(SHOW_FAILED, "Error: $error")
                         continuation.resume(Result.failure(HeliumAdException(HeliumErrorCode.NO_FILL)))
 
                         ad.destroy()
                     }
 
                     override fun onAdDismissed(ad: InneractiveAdSpot) {
+                        PartnerLogController.log(DID_DISMISS)
                         listener?.onPartnerAdDismissed(
                             PartnerAd(
                                 ad = ad,
                                 details = emptyMap(),
                                 request = partnerAd.request
                             ), null
-                        ) ?: LogController.e(
+                        ) ?: PartnerLogController.log(
+                            CUSTOM,
                             "Unable to fire onPartnerAdDismissed for Digital Turbine Exchange adapter. Listener " +
                                     "is null."
                         )
@@ -576,9 +598,11 @@ class DigitalTurbineExchangeAdapter : PartnerAdapter {
                 }
 
                 controller.rewardedListener = InneractiveFullScreenAdRewardedListener {
+                    PartnerLogController.log(DID_REWARD)
                     listener?.onPartnerAdRewarded(
                         partnerAd, Reward(0, "")
-                    ) ?: LogController.e(
+                    ) ?: PartnerLogController.log(
+                        CUSTOM,
                         "Unable to fire onPartnerAdRewarded for Digital Turbine Exchange adapter. Listener " +
                                 "is null."
                     )
@@ -587,7 +611,7 @@ class DigitalTurbineExchangeAdapter : PartnerAdapter {
                 controller.show(context as Activity)
             }
         } ?: run {
-            LogController.e("Digital Turbine Exchange failed to show the fullscreen ad. Ad is not an InneractiveAdSpot.")
+            PartnerLogController.log(SHOW_FAILED, "Ad is not an InneractiveAdSpot.")
             return Result.failure(HeliumAdException(HeliumErrorCode.INTERNAL))
         }
     }
@@ -609,17 +633,18 @@ class DigitalTurbineExchangeAdapter : PartnerAdapter {
                     it.destroy()
                 }
                 else -> {
-                    LogController.e(
-                        "Digital Turbine Exchange failed to destroy the ad. Ad " +
-                                "is neither a BannerView nor an InneractiveAdSpot."
+                    PartnerLogController.log(
+                        INVALIDATE_FAILED,
+                        "Ad is neither a BannerView nor an InneractiveAdSpot."
                     )
                     return Result.failure(HeliumAdException(HeliumErrorCode.INTERNAL))
                 }
             }
 
+            PartnerLogController.log(INVALIDATE_SUCCEEDED)
             Result.success(partnerAd)
         } ?: run {
-            LogController.e("Digital Turbine Exchange failed to destroy the ${partnerAd.request.format} ad. Ad is null.")
+            PartnerLogController.log(INVALIDATE_FAILED, "Ad is null.")
             Result.failure(HeliumAdException(HeliumErrorCode.INTERNAL))
         }
     }
