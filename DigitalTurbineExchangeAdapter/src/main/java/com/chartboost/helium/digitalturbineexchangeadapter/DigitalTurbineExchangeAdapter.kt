@@ -125,14 +125,15 @@ class DigitalTurbineExchangeAdapter : PartnerAdapter {
         PartnerLogController.log(SETUP_STARTED)
 
         return suspendCoroutine { continuation ->
-            partnerConfiguration.credentials[APP_ID_KEY]?.let { appId ->
-                InneractiveAdManager.initialize(
-                    context,
-                    appId
-                ) { status: OnFyberMarketplaceInitializedListener.FyberInitStatus ->
-                    continuation.resume(getInitResult(status))
-                }
-            } ?: run {
+            partnerConfiguration.credentials.optString(APP_ID_KEY).takeIf { it.isNotBlank() }
+                ?.let { appId ->
+                    InneractiveAdManager.initialize(
+                        context,
+                        appId
+                    ) { status: OnFyberMarketplaceInitializedListener.FyberInitStatus ->
+                        continuation.resume(getInitResult(status))
+                    }
+                } ?: run {
                 PartnerLogController.log(SETUP_FAILED, "Missing app ID.")
                 continuation.resume(Result.failure(HeliumAdException(HeliumErrorCode.PARTNER_SDK_NOT_INITIALIZED)))
             }
