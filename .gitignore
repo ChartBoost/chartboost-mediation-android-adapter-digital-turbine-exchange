@@ -2,3 +2,5 @@
 .idea/
 .DS_Store
 local.properties
+build/
+DigitalTurbineExchangeAdapter/build/
