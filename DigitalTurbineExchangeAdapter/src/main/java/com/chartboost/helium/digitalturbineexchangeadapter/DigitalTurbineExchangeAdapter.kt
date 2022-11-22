@@ -677,10 +677,10 @@ class DigitalTurbineExchangeAdapter : PartnerAdapter {
     private fun getHeliumErrorCode(error: InneractiveErrorCode?) = when (error) {
         InneractiveErrorCode.NO_FILL -> HeliumErrorCode.NO_FILL
         InneractiveErrorCode.SDK_INTERNAL_ERROR, InneractiveErrorCode.UNSPECIFIED -> HeliumErrorCode.PARTNER_ERROR
-        InneractiveErrorCode.CONNECTION_ERROR -> HeliumErrorCode.NO_CONNECTIVITY
+        InneractiveErrorCode.CONNECTION_ERROR, InneractiveErrorCode.CONNECTION_TIMEOUT -> HeliumErrorCode.NO_CONNECTIVITY
         InneractiveErrorCode.SERVER_INTERNAL_ERROR -> HeliumErrorCode.SERVER_ERROR
         InneractiveErrorCode.SERVER_INVALID_RESPONSE -> HeliumErrorCode.INVALID_BID_PAYLOAD
-        InneractiveErrorCode.LOAD_TIMEOUT, InneractiveErrorCode.IN_FLIGHT_TIMEOUT, InneractiveErrorCode.CONNECTION_TIMEOUT -> HeliumErrorCode.PARTNER_SDK_TIMEOUT
+        InneractiveErrorCode.LOAD_TIMEOUT, InneractiveErrorCode.IN_FLIGHT_TIMEOUT -> HeliumErrorCode.PARTNER_SDK_TIMEOUT
         else -> HeliumErrorCode.INTERNAL
     }
 }
