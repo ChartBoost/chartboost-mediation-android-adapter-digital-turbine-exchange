@@ -424,7 +424,7 @@ class DigitalTurbineExchangeAdapter : PartnerAdapter {
                     errorCode: InneractiveErrorCode?
                 ) {
                     PartnerLogController.log(LOAD_FAILED, "$errorCode")
-                    continuation.resume(Result.failure(HeliumAdException(HeliumErrorCode.NO_FILL)))
+                    continuation.resume(Result.failure(HeliumAdException(getHeliumErrorCode(errorCode))))
                 }
             })
 
@@ -486,7 +486,7 @@ class DigitalTurbineExchangeAdapter : PartnerAdapter {
                     errorCode: InneractiveErrorCode
                 ) {
                     PartnerLogController.log(LOAD_FAILED, "Ad spot $adSpot. Error code: $errorCode")
-                    continuation.resume(Result.failure(HeliumAdException(HeliumErrorCode.NO_FILL)))
+                    continuation.resume(Result.failure(HeliumAdException(getHeliumErrorCode(errorCode))))
                 }
             })
 
@@ -665,5 +665,22 @@ class DigitalTurbineExchangeAdapter : PartnerAdapter {
             PartnerLogController.log(INVALIDATE_FAILED, "Ad is null.")
             Result.failure(HeliumAdException(HeliumErrorCode.INTERNAL))
         }
+    }
+
+    /**
+     * Convert a given Digital Turbine Exchange error code into a [HeliumErrorCode].
+     *
+     * @param error The Digital Turbine Exchange error code.
+     *
+     * @return The corresponding [HeliumErrorCode].
+     */
+    private fun getHeliumErrorCode(error: InneractiveErrorCode?) = when (error) {
+        InneractiveErrorCode.NO_FILL -> HeliumErrorCode.NO_FILL
+        InneractiveErrorCode.SDK_INTERNAL_ERROR, InneractiveErrorCode.UNSPECIFIED -> HeliumErrorCode.PARTNER_ERROR
+        InneractiveErrorCode.CONNECTION_ERROR, InneractiveErrorCode.CONNECTION_TIMEOUT -> HeliumErrorCode.NO_CONNECTIVITY
+        InneractiveErrorCode.SERVER_INTERNAL_ERROR -> HeliumErrorCode.SERVER_ERROR
+        InneractiveErrorCode.SERVER_INVALID_RESPONSE -> HeliumErrorCode.INVALID_BID_PAYLOAD
+        InneractiveErrorCode.LOAD_TIMEOUT, InneractiveErrorCode.IN_FLIGHT_TIMEOUT -> HeliumErrorCode.PARTNER_SDK_TIMEOUT
+        else -> HeliumErrorCode.INTERNAL
     }
 }
