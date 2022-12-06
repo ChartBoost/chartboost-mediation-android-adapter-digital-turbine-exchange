@@ -7,6 +7,6 @@ pluginManagement {
 }
 
 rootProject.name = "DigitalTurbineExchangeAdapter"
-include ':DigitalTurbineExchangeAdapter'
-include ':android-helium-sdk'
-include ':Helium'
+include(":DigitalTurbineExchangeAdapter")
+include(":android-helium-sdk")
+include(":Helium")
