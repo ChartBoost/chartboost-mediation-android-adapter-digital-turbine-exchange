@@ -133,7 +133,7 @@ class DigitalTurbineExchangeAdapter : PartnerAdapter {
                     }
                 } ?: run {
                 PartnerLogController.log(SETUP_FAILED, "Missing app ID.")
-                continuation.resume(Result.failure(HeliumAdException(HeliumErrorCode.PARTNER_SDK_NOT_INITIALIZED)))
+                continuation.resume(Result.failure(HeliumAdException(HeliumError.HE_INITIALIZATION_FAILURE_INVALID_CREDENTIALS)))
             }
         }
     }
@@ -309,11 +309,11 @@ class DigitalTurbineExchangeAdapter : PartnerAdapter {
             }
             OnFyberMarketplaceInitializedListener.FyberInitStatus.FAILED_NO_KITS_DETECTED -> {
                 PartnerLogController.log(SETUP_FAILED, "No kits detected.")
-                Result.failure(HeliumAdException(HeliumErrorCode.PARTNER_SDK_NOT_INITIALIZED))
+                Result.failure(HeliumAdException(HeliumError.HE_INITIALIZATION_FAILURE_UNKNOWN))
             }
             OnFyberMarketplaceInitializedListener.FyberInitStatus.INVALID_APP_ID -> {
                 PartnerLogController.log(SETUP_FAILED, "Invalid app ID.")
-                Result.failure(HeliumAdException(HeliumErrorCode.PARTNER_SDK_NOT_INITIALIZED))
+                Result.failure(HeliumAdException(HeliumError.HE_INITIALIZATION_FAILURE_INVALID_CREDENTIALS))
             }
         }
     }
@@ -351,7 +351,7 @@ class DigitalTurbineExchangeAdapter : PartnerAdapter {
 
                             Result.failure(
                                 HeliumAdException(
-                                    HeliumErrorCode.PARTNER_ERROR
+                                    HeliumError.HE_LOAD_FAILURE_MISMATCHED_AD_PARAMS
                                 )
                             )
                         } else {
@@ -424,7 +424,7 @@ class DigitalTurbineExchangeAdapter : PartnerAdapter {
                     errorCode: InneractiveErrorCode?
                 ) {
                     PartnerLogController.log(LOAD_FAILED, "$errorCode")
-                    continuation.resume(Result.failure(HeliumAdException(getHeliumErrorCode(errorCode))))
+                    continuation.resume(Result.failure(HeliumAdException(getHeliumError(errorCode))))
                 }
             })
 
@@ -486,7 +486,7 @@ class DigitalTurbineExchangeAdapter : PartnerAdapter {
                     errorCode: InneractiveErrorCode
                 ) {
                     PartnerLogController.log(LOAD_FAILED, "Ad spot $adSpot. Error code: $errorCode")
-                    continuation.resume(Result.failure(HeliumAdException(getHeliumErrorCode(errorCode))))
+                    continuation.resume(Result.failure(HeliumAdException(getHeliumError(errorCode))))
                 }
             })
 
@@ -531,12 +531,12 @@ class DigitalTurbineExchangeAdapter : PartnerAdapter {
     ): Result<PartnerAd> {
         if (!readyToShow(context, partnerAd.request.format, partnerAd.ad)) {
             PartnerLogController.log(SHOW_FAILED, "Ad is not ready.")
-            return Result.failure(HeliumAdException(HeliumErrorCode.NO_FILL))
+            return Result.failure(HeliumAdException(HeliumError.HE_SHOW_FAILURE_AD_NOT_READY))
         }
 
         (partnerAd.ad as? InneractiveAdSpot)?.let { adSpot ->
             val controller = adSpot.selectedUnitController as? InneractiveFullscreenUnitController
-                ?: return Result.failure(HeliumAdException(HeliumErrorCode.PARTNER_ERROR))
+                ?: return Result.failure(HeliumAdException(HeliumError.HE_SHOW_FAILURE_WRONG_RESOURCE_TYPE))
 
             return suspendCoroutine { continuation ->
                 controller.eventsListener = object : InneractiveFullscreenAdEventsListener {
@@ -592,7 +592,7 @@ class DigitalTurbineExchangeAdapter : PartnerAdapter {
                         error: AdDisplayError
                     ) {
                         PartnerLogController.log(SHOW_FAILED, "Error: $error")
-                        continuation.resume(Result.failure(HeliumAdException(HeliumErrorCode.NO_FILL)))
+                        continuation.resume(Result.failure(HeliumAdException(HeliumError.HE_SHOW_FAILURE_UNKNOWN)))
 
                         ad.destroy()
                     }
@@ -630,7 +630,7 @@ class DigitalTurbineExchangeAdapter : PartnerAdapter {
             }
         } ?: run {
             PartnerLogController.log(SHOW_FAILED, "Ad is not an InneractiveAdSpot.")
-            return Result.failure(HeliumAdException(HeliumErrorCode.INTERNAL))
+            return Result.failure(HeliumAdException(HeliumError.HE_SHOW_FAILURE_WRONG_RESOURCE_TYPE))
         }
     }
 
@@ -655,7 +655,7 @@ class DigitalTurbineExchangeAdapter : PartnerAdapter {
                         INVALIDATE_FAILED,
                         "Ad is neither a BannerView nor an InneractiveAdSpot."
                     )
-                    return Result.failure(HeliumAdException(HeliumErrorCode.INTERNAL))
+                    return Result.failure(HeliumAdException(HeliumError.HE_INVALIDATE_FAILURE_WRONG_RESOURCE_TYPE))
                 }
             }
 
@@ -663,24 +663,25 @@ class DigitalTurbineExchangeAdapter : PartnerAdapter {
             Result.success(partnerAd)
         } ?: run {
             PartnerLogController.log(INVALIDATE_FAILED, "Ad is null.")
-            Result.failure(HeliumAdException(HeliumErrorCode.INTERNAL))
+            Result.failure(HeliumAdException(HeliumError.HE_INVALIDATE_FAILURE_AD_NOT_FOUND))
         }
     }
 
     /**
-     * Convert a given Digital Turbine Exchange error code into a [HeliumErrorCode].
+     * Convert a given Digital Turbine Exchange error code into a [HeliumError].
      *
      * @param error The Digital Turbine Exchange error code.
      *
-     * @return The corresponding [HeliumErrorCode].
+     * @return The corresponding [HeliumError].
      */
-    private fun getHeliumErrorCode(error: InneractiveErrorCode?) = when (error) {
-        InneractiveErrorCode.NO_FILL -> HeliumErrorCode.NO_FILL
-        InneractiveErrorCode.SDK_INTERNAL_ERROR, InneractiveErrorCode.UNSPECIFIED -> HeliumErrorCode.PARTNER_ERROR
-        InneractiveErrorCode.CONNECTION_ERROR, InneractiveErrorCode.CONNECTION_TIMEOUT -> HeliumErrorCode.NO_CONNECTIVITY
-        InneractiveErrorCode.SERVER_INTERNAL_ERROR -> HeliumErrorCode.SERVER_ERROR
-        InneractiveErrorCode.SERVER_INVALID_RESPONSE -> HeliumErrorCode.INVALID_BID_PAYLOAD
-        InneractiveErrorCode.LOAD_TIMEOUT, InneractiveErrorCode.IN_FLIGHT_TIMEOUT -> HeliumErrorCode.PARTNER_SDK_TIMEOUT
-        else -> HeliumErrorCode.INTERNAL
+    private fun getHeliumError(error: InneractiveErrorCode?) = when (error) {
+        InneractiveErrorCode.NO_FILL -> HeliumError.HE_LOAD_FAILURE_NO_FILL
+        InneractiveErrorCode.SDK_INTERNAL_ERROR, InneractiveErrorCode.UNSPECIFIED -> HeliumError.HE_PARTNER_ERROR
+        InneractiveErrorCode.CONNECTION_ERROR -> HeliumError.HE_NO_CONNECTIVITY
+        InneractiveErrorCode.SERVER_INTERNAL_ERROR -> HeliumError.HE_AD_SERVER_ERROR
+        InneractiveErrorCode.SERVER_INVALID_RESPONSE -> HeliumError.HE_LOAD_FAILURE_INVALID_BID_RESPONSE
+        InneractiveErrorCode.LOAD_TIMEOUT -> HeliumError.HE_LOAD_FAILURE_TIMEOUT
+        InneractiveErrorCode.ERROR_CODE_NATIVE_VIDEO_NOT_SUPPORTED -> HeliumError.HE_LOAD_FAILURE_MISMATCHED_AD_FORMAT
+        else -> HeliumError.HE_PARTNER_ERROR
     }
 }
