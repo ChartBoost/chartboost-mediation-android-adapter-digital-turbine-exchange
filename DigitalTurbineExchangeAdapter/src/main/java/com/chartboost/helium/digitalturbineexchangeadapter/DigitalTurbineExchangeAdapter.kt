@@ -676,7 +676,6 @@ class DigitalTurbineExchangeAdapter : PartnerAdapter {
      */
     private fun getHeliumError(error: InneractiveErrorCode?) = when (error) {
         InneractiveErrorCode.NO_FILL -> HeliumError.HE_LOAD_FAILURE_NO_FILL
-        InneractiveErrorCode.SDK_INTERNAL_ERROR, InneractiveErrorCode.UNSPECIFIED -> HeliumError.HE_PARTNER_ERROR
         InneractiveErrorCode.CONNECTION_ERROR -> HeliumError.HE_NO_CONNECTIVITY
         InneractiveErrorCode.SERVER_INTERNAL_ERROR -> HeliumError.HE_AD_SERVER_ERROR
         InneractiveErrorCode.SERVER_INVALID_RESPONSE -> HeliumError.HE_LOAD_FAILURE_INVALID_BID_RESPONSE
