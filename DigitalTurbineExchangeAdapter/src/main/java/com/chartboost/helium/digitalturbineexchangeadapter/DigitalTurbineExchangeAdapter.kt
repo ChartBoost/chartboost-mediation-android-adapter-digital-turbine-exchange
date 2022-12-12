@@ -76,11 +76,6 @@ class DigitalTurbineExchangeAdapter : PartnerAdapter {
     private val listeners = mutableMapOf<String, PartnerAdListener>()
 
     /**
-     * Indicate whether GDPR currently applies to the user.
-     */
-    private var gdprApplies = false
-
-    /**
      * Get the Digital Turbine Exchange SDK version.
      */
     override val partnerSdkVersion: String
@@ -139,23 +134,25 @@ class DigitalTurbineExchangeAdapter : PartnerAdapter {
     }
 
     /**
-     * Save the current GDPR applicability state for later use.
+     * Notify the Digital Turbine Exchange SDK of the GDPR applicability and consent status.
      *
      * @param context The current [Context].
-     * @param gdprApplies True if GDPR applies, false otherwise.
+     * @param applies True if GDPR applies, false otherwise.
+     * @param gdprConsentStatus The user's GDPR consent status.
      */
-    override fun setGdprApplies(context: Context, gdprApplies: Boolean) {
-        PartnerLogController.log(if (gdprApplies) GDPR_APPLICABLE else GDPR_NOT_APPLICABLE)
-        this.gdprApplies = gdprApplies
-    }
+    override fun setGdpr(
+        context: Context,
+        applies: Boolean?,
+        gdprConsentStatus: GdprConsentStatus
+    ) {
+        PartnerLogController.log(
+            when (applies) {
+                true -> GDPR_APPLICABLE
+                false -> GDPR_NOT_APPLICABLE
+                else -> GDPR_UNKNOWN
+            }
+        )
 
-    /**
-     * Notify Digital Turbine Exchange of the user's GDPR consent status, if applicable.
-     *
-     * @param context The current [Context].
-     * @param gdprConsentStatus The user's current GDPR consent status.
-     */
-    override fun setGdprConsentStatus(context: Context, gdprConsentStatus: GdprConsentStatus) {
         PartnerLogController.log(
             when (gdprConsentStatus) {
                 GdprConsentStatus.GDPR_CONSENT_UNKNOWN -> GDPR_CONSENT_UNKNOWN
@@ -164,7 +161,7 @@ class DigitalTurbineExchangeAdapter : PartnerAdapter {
             }
         )
 
-        if (gdprApplies) {
+        if (applies == true) {
             InneractiveAdManager.setGdprConsent(
                 gdprConsentStatus == GdprConsentStatus.GDPR_CONSENT_GRANTED,
                 InneractiveAdManager.GdprConsentSource.External
