@@ -614,9 +614,7 @@ class DigitalTurbineExchangeAdapter : PartnerAdapter {
 
                 controller.rewardedListener = InneractiveFullScreenAdRewardedListener {
                     PartnerLogController.log(DID_REWARD)
-                    listener?.onPartnerAdRewarded(
-                        partnerAd, Reward(0, "")
-                    ) ?: PartnerLogController.log(
+                    listener?.onPartnerAdRewarded(partnerAd) ?: PartnerLogController.log(
                         CUSTOM,
                         "Unable to fire onPartnerAdRewarded for Digital Turbine Exchange adapter. Listener " +
                                 "is null."
