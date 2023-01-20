@@ -11,6 +11,9 @@ import com.chartboost.heliumsdk.utils.PartnerLogController.PartnerAdapterEvents.
 import com.fyber.inneractive.sdk.external.*
 import com.fyber.inneractive.sdk.external.InneractiveAdSpot.RequestListener
 import com.fyber.inneractive.sdk.external.InneractiveUnitController.AdDisplayError
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.decodeFromJsonElement
 import kotlin.coroutines.resume
 import kotlin.coroutines.suspendCoroutine
 
@@ -123,7 +126,10 @@ class DigitalTurbineExchangeAdapter : PartnerAdapter {
         PartnerLogController.log(SETUP_STARTED)
 
         return suspendCoroutine { continuation ->
-            partnerConfiguration.credentials.optString(APP_ID_KEY).trim().takeIf { it.isNotEmpty() }
+            Json.decodeFromJsonElement<String>(
+                (partnerConfiguration.credentials as JsonObject).getValue(APP_ID_KEY)
+            ).trim()
+                .takeIf { it.isNotEmpty() }
                 ?.let { appId ->
                     InneractiveAdManager.initialize(
                         context,
