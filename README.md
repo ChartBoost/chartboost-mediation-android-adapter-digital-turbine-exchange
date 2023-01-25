@@ -1,19 +1,19 @@
 # Chartboost Mediation Digital Turbine Exchange Adapter
 
-The Chartboost Mediation Digital Turbine Exchange adapter mediates the Digital Turbine Exchange SDK into the Chartboost Mediation SDK.
+The Chartboost Mediation Digital Turbine Exchange adapter mediates Digital Turbine Exchange via the Chartboost Mediation SDK.
 
 ## Minimum Requirements
 
-| Plugin | Version |
-| ------ | ------ |
-| Chartboost Mediation SDK | 4.0.0+ |
-| Android API | 21+ |
+| Plugin                   | Version |
+| ------------------------ | ------- |
+| Chartboost Mediation SDK | 4.0.0+  |
+| Android API              | 21+     |
 
 ## Integration
 
 In your `build.gradle`, add the following entry:
 ```
-    implementation "com.chartboost:mediation-adapter-digital-turbine-exchange:4.8.2.1.0"
+    implementation "com.chartboost:chartboost-mediation-adapter-digital-turbine-exchange:4.8.2.1.0"
 ```
 
 ## Contributions
