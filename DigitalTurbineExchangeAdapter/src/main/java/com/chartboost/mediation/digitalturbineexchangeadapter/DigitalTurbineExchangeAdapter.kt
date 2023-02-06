@@ -5,13 +5,13 @@
  * license that can be found in the LICENSE file.
  */
 
-package com.chartboost.helium.digitalturbineexchangeadapter
+package com.chartboost.mediation.digitalturbineexchangeadapter
 
 import android.app.Activity
 import android.content.Context
 import android.util.Log
 import android.widget.FrameLayout
-import com.chartboost.heliumsdk.BuildConfig.HELIUM_VERSION
+import com.chartboost.heliumsdk.HeliumSdk
 import com.chartboost.heliumsdk.domain.*
 import com.chartboost.heliumsdk.utils.PartnerLogController
 import com.chartboost.heliumsdk.utils.PartnerLogController.PartnerAdapterEvents.*
@@ -25,7 +25,7 @@ import kotlin.coroutines.resume
 import kotlin.coroutines.suspendCoroutine
 
 /**
- * The Helium Digital Turbine Exchange adapter
+ * The Chartboost Mediation Digital Turbine Exchange adapter
  */
 class DigitalTurbineExchangeAdapter : PartnerAdapter {
     companion object {
@@ -51,7 +51,7 @@ class DigitalTurbineExchangeAdapter : PartnerAdapter {
          *
          * @param level The log level to set. Must be one of the constants in Android's [Log] class.
          */
-        public fun setLogLevel(level: Int) {
+        fun setLogLevel(level: Int) {
             InneractiveAdManager.setLogLevel(level)
             PartnerLogController.log(
                 CUSTOM,
@@ -75,13 +75,13 @@ class DigitalTurbineExchangeAdapter : PartnerAdapter {
         private const val APP_ID_KEY = "fyber_app_id"
 
         /**
-         * Key for identifying the Helium mediation platform to the partner.
+         * Key for identifying the mediation platform (Chartboost) to the partner.
          */
-        private const val MEDIATOR_NAME = "Helium"
+        private const val MEDIATOR_NAME = "Chartboost"
     }
 
     /**
-     * A map of Helium's listeners for the corresponding Helium placements.
+     * A map of Chartboost Mediation's listeners for the corresponding Chartboost placements.
      */
     private val listeners = mutableMapOf<String, PartnerAdListener>()
 
@@ -95,16 +95,16 @@ class DigitalTurbineExchangeAdapter : PartnerAdapter {
      * Get the Digital Turbine Exchange adapter version.
      *
      * You may version the adapter using any preferred convention, but it is recommended to apply the
-     * following format if the adapter will be published by Helium:
+     * following format if the adapter will be published by Chartboost Mediation:
      *
-     * Helium.Partner.Adapter
+     * Chartboost Mediation.Partner.Adapter
      *
-     * "Helium" represents the Helium SDK’s major version that is compatible with this adapter. This must be 1 digit.
+     * "Chartboost Mediation" represents the Chartboost Mediation SDK’s major version that is compatible with this adapter. This must be 1 digit.
      * "Partner" represents the partner SDK’s major.minor.patch.x (where x is optional) version that is compatible with this adapter. This can be 3-4 digits.
      * "Adapter" represents this adapter’s version (starting with 0), which resets to 0 when the partner SDK’s version changes. This must be 1 digit.
      */
     override val adapterVersion: String
-        get() = BuildConfig.HELIUM_DIGITAL_TURBINE_EXCHANGE_ADAPTER_VERSION
+        get() = BuildConfig.CHARTBOOST_MEDIATION_DIGITAL_TURBINE_EXCHANGE_ADAPTER_VERSION
 
     /**
      * Get the partner name for internal uses.
@@ -146,7 +146,7 @@ class DigitalTurbineExchangeAdapter : PartnerAdapter {
                     }
                 } ?: run {
                 PartnerLogController.log(SETUP_FAILED, "Missing app ID.")
-                continuation.resume(Result.failure(HeliumAdException(HeliumError.HE_INITIALIZATION_FAILURE_INVALID_CREDENTIALS)))
+                continuation.resume(Result.failure(ChartboostMediationAdException(ChartboostMediationError.CM_INITIALIZATION_FAILURE_INVALID_CREDENTIALS)))
             }
         }
     }
@@ -246,7 +246,7 @@ class DigitalTurbineExchangeAdapter : PartnerAdapter {
      *
      * @param context The current [Context].
      * @param request An [PartnerAdLoadRequest] instance containing relevant data for the current ad load call.
-     * @param partnerAdListener A [PartnerAdListener] to notify Helium of ad events.
+     * @param partnerAdListener A [PartnerAdListener] to notify Chartboost Mediation of ad events.
      *
      * @return Result.success(PartnerAd) if the ad was successfully loaded, Result.failure(Exception) otherwise.
      */
@@ -277,7 +277,7 @@ class DigitalTurbineExchangeAdapter : PartnerAdapter {
      */
     override suspend fun show(context: Context, partnerAd: PartnerAd): Result<PartnerAd> {
         PartnerLogController.log(SHOW_STARTED)
-        val listener = listeners.remove(partnerAd.request.heliumPlacement)
+        val listener = listeners.remove(partnerAd.request.chartboostPlacement)
 
         return when (partnerAd.request.format) {
             // Banner ads do not have a separate "show" mechanism.
@@ -303,7 +303,7 @@ class DigitalTurbineExchangeAdapter : PartnerAdapter {
     override suspend fun invalidate(partnerAd: PartnerAd): Result<PartnerAd> {
         PartnerLogController.log(INVALIDATE_STARTED)
 
-        listeners.remove(partnerAd.request.heliumPlacement)
+        listeners.remove(partnerAd.request.chartboostPlacement)
         return destroyAd(partnerAd)
     }
 
@@ -324,11 +324,11 @@ class DigitalTurbineExchangeAdapter : PartnerAdapter {
             }
             OnFyberMarketplaceInitializedListener.FyberInitStatus.FAILED_NO_KITS_DETECTED -> {
                 PartnerLogController.log(SETUP_FAILED, "No kits detected.")
-                Result.failure(HeliumAdException(HeliumError.HE_INITIALIZATION_FAILURE_UNKNOWN))
+                Result.failure(ChartboostMediationAdException(ChartboostMediationError.CM_INITIALIZATION_FAILURE_UNKNOWN))
             }
             OnFyberMarketplaceInitializedListener.FyberInitStatus.INVALID_APP_ID -> {
                 PartnerLogController.log(SETUP_FAILED, "Invalid app ID.")
-                Result.failure(HeliumAdException(HeliumError.HE_INITIALIZATION_FAILURE_INVALID_CREDENTIALS))
+                Result.failure(ChartboostMediationAdException(ChartboostMediationError.CM_INITIALIZATION_FAILURE_INVALID_CREDENTIALS))
             }
         }
     }
@@ -338,7 +338,7 @@ class DigitalTurbineExchangeAdapter : PartnerAdapter {
      *
      * @param context The current [Context].
      * @param request An [PartnerAdLoadRequest] instance containing relevant data for the current ad load call.
-     * @param listener A [PartnerAdListener] to notify Helium of ad events.
+     * @param listener A [PartnerAdListener] to notify Chartboost Mediation of ad events.
      *
      * @return Result.success(PartnerAd) if the ad was successfully loaded, Result.failure(Exception) otherwise.
      */
@@ -352,7 +352,7 @@ class DigitalTurbineExchangeAdapter : PartnerAdapter {
 
         adSpot.addUnitController(unitController)
         adSpot.setMediationName(MEDIATOR_NAME)
-        adSpot.mediationVersion = HELIUM_VERSION
+        adSpot.mediationVersion = HeliumSdk.getVersion()
 
         return suspendCoroutine { continuation ->
             adSpot.setRequestListener(object : RequestListener {
@@ -365,8 +365,8 @@ class DigitalTurbineExchangeAdapter : PartnerAdapter {
                             )
 
                             Result.failure(
-                                HeliumAdException(
-                                    HeliumError.HE_LOAD_FAILURE_MISMATCHED_AD_PARAMS
+                                ChartboostMediationAdException(
+                                    ChartboostMediationError.CM_LOAD_FAILURE_MISMATCHED_AD_PARAMS
                                 )
                             )
                         } else {
@@ -439,7 +439,7 @@ class DigitalTurbineExchangeAdapter : PartnerAdapter {
                     errorCode: InneractiveErrorCode?
                 ) {
                     PartnerLogController.log(LOAD_FAILED, "$errorCode")
-                    continuation.resume(Result.failure(HeliumAdException(getHeliumError(errorCode))))
+                    continuation.resume(Result.failure(ChartboostMediationAdException(getChartboostMediationError(errorCode))))
                 }
             })
 
@@ -461,7 +461,7 @@ class DigitalTurbineExchangeAdapter : PartnerAdapter {
      * Attempt to load a Digital Turbine Exchange fullscreen ad. This method supports both interstitial and rewarded ads.
      *
      * @param request An [PartnerAdLoadRequest] instance containing relevant data for the current ad load call.
-     * @param listener A [PartnerAdListener] to notify Helium of ad events.
+     * @param listener A [PartnerAdListener] to notify Chartboost Mediation of ad events.
      *
      * @return Result.success(PartnerAd) if the ad was successfully loaded, Result.failure(Exception) otherwise.
      */
@@ -470,7 +470,7 @@ class DigitalTurbineExchangeAdapter : PartnerAdapter {
         listener: PartnerAdListener
     ): Result<PartnerAd> {
         // Save the listener for later use.
-        listeners[request.heliumPlacement] = listener
+        listeners[request.chartboostPlacement] = listener
 
         val videoSpot = InneractiveAdSpotManager.get().createSpot()
         val unitController = InneractiveFullscreenUnitController()
@@ -501,7 +501,7 @@ class DigitalTurbineExchangeAdapter : PartnerAdapter {
                     errorCode: InneractiveErrorCode
                 ) {
                     PartnerLogController.log(LOAD_FAILED, "Ad spot $adSpot. Error code: $errorCode")
-                    continuation.resume(Result.failure(HeliumAdException(getHeliumError(errorCode))))
+                    continuation.resume(Result.failure(ChartboostMediationAdException(getChartboostMediationError(errorCode))))
                 }
             })
 
@@ -535,7 +535,7 @@ class DigitalTurbineExchangeAdapter : PartnerAdapter {
      *
      * @param context The current [Context].
      * @param partnerAd The [PartnerAd] object containing the Digital Turbine Exchange ad to be shown.
-     * @param listener A [PartnerAdListener] to notify Helium of ad events.
+     * @param listener A [PartnerAdListener] to notify Chartboost Mediation of ad events.
      *
      * @return Result.success(PartnerAd) if the ad was successfully shown, Result.failure(Exception) otherwise.
      */
@@ -546,12 +546,12 @@ class DigitalTurbineExchangeAdapter : PartnerAdapter {
     ): Result<PartnerAd> {
         if (!readyToShow(context, partnerAd.request.format, partnerAd.ad)) {
             PartnerLogController.log(SHOW_FAILED, "Ad is not ready.")
-            return Result.failure(HeliumAdException(HeliumError.HE_SHOW_FAILURE_AD_NOT_READY))
+            return Result.failure(ChartboostMediationAdException(ChartboostMediationError.CM_SHOW_FAILURE_AD_NOT_READY))
         }
 
         (partnerAd.ad as? InneractiveAdSpot)?.let { adSpot ->
             val controller = adSpot.selectedUnitController as? InneractiveFullscreenUnitController
-                ?: return Result.failure(HeliumAdException(HeliumError.HE_SHOW_FAILURE_WRONG_RESOURCE_TYPE))
+                ?: return Result.failure(ChartboostMediationAdException(ChartboostMediationError.CM_SHOW_FAILURE_WRONG_RESOURCE_TYPE))
 
             return suspendCoroutine { continuation ->
                 controller.eventsListener = object : InneractiveFullscreenAdEventsListener {
@@ -607,7 +607,7 @@ class DigitalTurbineExchangeAdapter : PartnerAdapter {
                         error: AdDisplayError
                     ) {
                         PartnerLogController.log(SHOW_FAILED, "Error: $error")
-                        continuation.resume(Result.failure(HeliumAdException(HeliumError.HE_SHOW_FAILURE_UNKNOWN)))
+                        continuation.resume(Result.failure(ChartboostMediationAdException(ChartboostMediationError.CM_SHOW_FAILURE_UNKNOWN)))
 
                         ad.destroy()
                     }
@@ -643,7 +643,7 @@ class DigitalTurbineExchangeAdapter : PartnerAdapter {
             }
         } ?: run {
             PartnerLogController.log(SHOW_FAILED, "Ad is not an InneractiveAdSpot.")
-            return Result.failure(HeliumAdException(HeliumError.HE_SHOW_FAILURE_WRONG_RESOURCE_TYPE))
+            return Result.failure(ChartboostMediationAdException(ChartboostMediationError.CM_SHOW_FAILURE_WRONG_RESOURCE_TYPE))
         }
     }
 
@@ -668,7 +668,7 @@ class DigitalTurbineExchangeAdapter : PartnerAdapter {
                         INVALIDATE_FAILED,
                         "Ad is neither a BannerView nor an InneractiveAdSpot."
                     )
-                    return Result.failure(HeliumAdException(HeliumError.HE_INVALIDATE_FAILURE_WRONG_RESOURCE_TYPE))
+                    return Result.failure(ChartboostMediationAdException(ChartboostMediationError.CM_INVALIDATE_FAILURE_WRONG_RESOURCE_TYPE))
                 }
             }
 
@@ -676,24 +676,24 @@ class DigitalTurbineExchangeAdapter : PartnerAdapter {
             Result.success(partnerAd)
         } ?: run {
             PartnerLogController.log(INVALIDATE_FAILED, "Ad is null.")
-            Result.failure(HeliumAdException(HeliumError.HE_INVALIDATE_FAILURE_AD_NOT_FOUND))
+            Result.failure(ChartboostMediationAdException(ChartboostMediationError.CM_INVALIDATE_FAILURE_AD_NOT_FOUND))
         }
     }
 
     /**
-     * Convert a given Digital Turbine Exchange error code into a [HeliumError].
+     * Convert a given Digital Turbine Exchange error code into a [ChartboostMediationError].
      *
      * @param error The Digital Turbine Exchange error code.
      *
-     * @return The corresponding [HeliumError].
+     * @return The corresponding [ChartboostMediationError].
      */
-    private fun getHeliumError(error: InneractiveErrorCode?) = when (error) {
-        InneractiveErrorCode.NO_FILL -> HeliumError.HE_LOAD_FAILURE_NO_FILL
-        InneractiveErrorCode.CONNECTION_ERROR -> HeliumError.HE_NO_CONNECTIVITY
-        InneractiveErrorCode.SERVER_INTERNAL_ERROR -> HeliumError.HE_AD_SERVER_ERROR
-        InneractiveErrorCode.SERVER_INVALID_RESPONSE -> HeliumError.HE_LOAD_FAILURE_INVALID_BID_RESPONSE
-        InneractiveErrorCode.LOAD_TIMEOUT -> HeliumError.HE_LOAD_FAILURE_TIMEOUT
-        InneractiveErrorCode.ERROR_CODE_NATIVE_VIDEO_NOT_SUPPORTED -> HeliumError.HE_LOAD_FAILURE_MISMATCHED_AD_FORMAT
-        else -> HeliumError.HE_PARTNER_ERROR
+    private fun getChartboostMediationError(error: InneractiveErrorCode?) = when (error) {
+        InneractiveErrorCode.NO_FILL -> ChartboostMediationError.CM_LOAD_FAILURE_NO_FILL
+        InneractiveErrorCode.CONNECTION_ERROR -> ChartboostMediationError.CM_NO_CONNECTIVITY
+        InneractiveErrorCode.SERVER_INTERNAL_ERROR -> ChartboostMediationError.CM_AD_SERVER_ERROR
+        InneractiveErrorCode.SERVER_INVALID_RESPONSE -> ChartboostMediationError.CM_LOAD_FAILURE_INVALID_BID_RESPONSE
+        InneractiveErrorCode.LOAD_TIMEOUT -> ChartboostMediationError.CM_LOAD_FAILURE_TIMEOUT
+        InneractiveErrorCode.ERROR_CODE_NATIVE_VIDEO_NOT_SUPPORTED -> ChartboostMediationError.CM_LOAD_FAILURE_MISMATCHED_AD_FORMAT
+        else -> ChartboostMediationError.CM_PARTNER_ERROR
     }
 }
