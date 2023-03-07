@@ -360,7 +360,7 @@ class DigitalTurbineExchangeAdapter : PartnerAdapter {
 
         adSpot.addUnitController(unitController)
         adSpot.setMediationName(MEDIATOR_NAME)
-        adSpot.mediationVersion = HeliumSdk.getVersion()
+        adSpot.mediationVersion = HeliumSdk.version
 
         return suspendCoroutine { continuation ->
             adSpot.setRequestListener(object : RequestListener {
