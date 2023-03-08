@@ -264,7 +264,7 @@ class DigitalTurbineExchangeAdapter : PartnerAdapter {
             AdFormat.INTERSTITIAL, AdFormat.REWARDED -> {
                 loadFullscreenAd(request, partnerAdListener)
             }
-            AdFormat.REWARDED_INTERSTITIAL -> {
+            else -> {
                 PartnerLogController.log(LOAD_FAILED)
                 Result.failure(ChartboostMediationAdException(ChartboostMediationError.CM_LOAD_FAILURE_UNSUPPORTED_AD_FORMAT))
             }
@@ -294,7 +294,7 @@ class DigitalTurbineExchangeAdapter : PartnerAdapter {
                 partnerAd,
                 listener
             )
-            AdFormat.REWARDED_INTERSTITIAL -> {
+            else -> {
                 PartnerLogController.log(LOAD_FAILED)
                 Result.failure(ChartboostMediationAdException(ChartboostMediationError.CM_SHOW_FAILURE_UNSUPPORTED_AD_FORMAT))
             }
