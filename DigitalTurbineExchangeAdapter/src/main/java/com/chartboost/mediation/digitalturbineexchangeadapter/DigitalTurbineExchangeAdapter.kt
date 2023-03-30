@@ -81,7 +81,7 @@ class DigitalTurbineExchangeAdapter : PartnerAdapter {
     }
 
     /**
-     * A map of Chartboost Mediation's listeners for the corresponding Chartboost placements.
+     * A map of Chartboost Mediation's listeners for the corresponding load identifier.
      */
     private val listeners = mutableMapOf<String, PartnerAdListener>()
 
@@ -281,7 +281,7 @@ class DigitalTurbineExchangeAdapter : PartnerAdapter {
      */
     override suspend fun show(context: Context, partnerAd: PartnerAd): Result<PartnerAd> {
         PartnerLogController.log(SHOW_STARTED)
-        val listener = listeners.remove(partnerAd.request.chartboostPlacement)
+        val listener = listeners.remove(partnerAd.request.identifier)
 
         return when (partnerAd.request.format) {
             // Banner ads do not have a separate "show" mechanism.
@@ -311,7 +311,7 @@ class DigitalTurbineExchangeAdapter : PartnerAdapter {
     override suspend fun invalidate(partnerAd: PartnerAd): Result<PartnerAd> {
         PartnerLogController.log(INVALIDATE_STARTED)
 
-        listeners.remove(partnerAd.request.chartboostPlacement)
+        listeners.remove(partnerAd.request.identifier)
         return destroyAd(partnerAd)
     }
 
@@ -478,7 +478,7 @@ class DigitalTurbineExchangeAdapter : PartnerAdapter {
         listener: PartnerAdListener
     ): Result<PartnerAd> {
         // Save the listener for later use.
-        listeners[request.chartboostPlacement] = listener
+        listeners[request.identifier] = listener
 
         val videoSpot = InneractiveAdSpotManager.get().createSpot()
         val unitController = InneractiveFullscreenUnitController()
