@@ -18,11 +18,11 @@ import com.chartboost.heliumsdk.utils.PartnerLogController.PartnerAdapterEvents.
 import com.fyber.inneractive.sdk.external.*
 import com.fyber.inneractive.sdk.external.InneractiveAdSpot.RequestListener
 import com.fyber.inneractive.sdk.external.InneractiveUnitController.AdDisplayError
+import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.decodeFromJsonElement
 import kotlin.coroutines.resume
-import kotlin.coroutines.suspendCoroutine
 
 /**
  * The Chartboost Mediation Digital Turbine Exchange adapter
@@ -132,7 +132,13 @@ class DigitalTurbineExchangeAdapter : PartnerAdapter {
     ): Result<Unit> {
         PartnerLogController.log(SETUP_STARTED)
 
-        return suspendCoroutine { continuation ->
+        return suspendCancellableCoroutine { continuation ->
+            fun resumeOnce(result: Result<Unit>) {
+                if (continuation.isActive) {
+                    continuation.resume(result)
+                }
+            }
+
             Json.decodeFromJsonElement<String>(
                 (partnerConfiguration.credentials as JsonObject).getValue(APP_ID_KEY)
             ).trim()
@@ -142,11 +148,11 @@ class DigitalTurbineExchangeAdapter : PartnerAdapter {
                         context,
                         appId
                     ) { status: OnFyberMarketplaceInitializedListener.FyberInitStatus ->
-                        continuation.resume(getInitResult(status))
+                        resumeOnce(getInitResult(status))
                     }
                 } ?: run {
                 PartnerLogController.log(SETUP_FAILED, "Missing app ID.")
-                continuation.resume(Result.failure(ChartboostMediationAdException(ChartboostMediationError.CM_INITIALIZATION_FAILURE_INVALID_CREDENTIALS)))
+                resumeOnce(Result.failure(ChartboostMediationAdException(ChartboostMediationError.CM_INITIALIZATION_FAILURE_INVALID_CREDENTIALS)))
             }
         }
     }
@@ -362,10 +368,16 @@ class DigitalTurbineExchangeAdapter : PartnerAdapter {
         adSpot.setMediationName(MEDIATOR_NAME)
         adSpot.mediationVersion = HeliumSdk.getVersion()
 
-        return suspendCoroutine { continuation ->
+        return suspendCancellableCoroutine { continuation ->
             adSpot.setRequestListener(object : RequestListener {
+                fun resumeOnce(result: Result<PartnerAd>) {
+                    if (continuation.isActive) {
+                        continuation.resume(result)
+                    }
+                }
+
                 override fun onInneractiveSuccessfulAdRequest(ad: InneractiveAdSpot?) {
-                    continuation.resume(
+                    resumeOnce(
                         if (ad != adSpot) {
                             PartnerLogController.log(
                                 LOAD_FAILED,
@@ -447,7 +459,7 @@ class DigitalTurbineExchangeAdapter : PartnerAdapter {
                     errorCode: InneractiveErrorCode?
                 ) {
                     PartnerLogController.log(LOAD_FAILED, "$errorCode")
-                    continuation.resume(Result.failure(ChartboostMediationAdException(getChartboostMediationError(errorCode))))
+                    resumeOnce(Result.failure(ChartboostMediationAdException(getChartboostMediationError(errorCode))))
                 }
             })
 
@@ -489,11 +501,17 @@ class DigitalTurbineExchangeAdapter : PartnerAdapter {
         videoSpot.setMediationName(MEDIATOR_NAME)
         videoSpot.mediationVersion = adapterVersion
 
-        return suspendCoroutine { continuation ->
+        return suspendCancellableCoroutine { continuation ->
             videoSpot.setRequestListener(object : RequestListener {
+                fun resumeOnce(result: Result<PartnerAd>) {
+                    if (continuation.isActive) {
+                        continuation.resume(result)
+                    }
+                }
+
                 override fun onInneractiveSuccessfulAdRequest(adSpot: InneractiveAdSpot) {
                     PartnerLogController.log(LOAD_SUCCEEDED)
-                    continuation.resume(
+                    resumeOnce(
                         Result.success(
                             PartnerAd(
                                 ad = adSpot,
@@ -509,7 +527,7 @@ class DigitalTurbineExchangeAdapter : PartnerAdapter {
                     errorCode: InneractiveErrorCode
                 ) {
                     PartnerLogController.log(LOAD_FAILED, "Ad spot $adSpot. Error code: $errorCode")
-                    continuation.resume(Result.failure(ChartboostMediationAdException(getChartboostMediationError(errorCode))))
+                    resumeOnce(Result.failure(ChartboostMediationAdException(getChartboostMediationError(errorCode))))
                 }
             })
 
@@ -561,8 +579,14 @@ class DigitalTurbineExchangeAdapter : PartnerAdapter {
             val controller = adSpot.selectedUnitController as? InneractiveFullscreenUnitController
                 ?: return Result.failure(ChartboostMediationAdException(ChartboostMediationError.CM_SHOW_FAILURE_WRONG_RESOURCE_TYPE))
 
-            return suspendCoroutine { continuation ->
+            return suspendCancellableCoroutine { continuation ->
                 controller.eventsListener = object : InneractiveFullscreenAdEventsListener {
+                    fun resumeOnce(result: Result<PartnerAd>) {
+                        if (continuation.isActive) {
+                            continuation.resume(result)
+                        }
+                    }
+
                     override fun onAdImpression(ad: InneractiveAdSpot) {
                         PartnerLogController.log(DID_TRACK_IMPRESSION)
                         listener?.onPartnerAdImpression(
@@ -578,7 +602,7 @@ class DigitalTurbineExchangeAdapter : PartnerAdapter {
                         )
 
                         PartnerLogController.log(SHOW_SUCCEEDED)
-                        continuation.resume(
+                        resumeOnce(
                             Result.success(
                                 PartnerAd(
                                     ad = ad,
@@ -615,7 +639,7 @@ class DigitalTurbineExchangeAdapter : PartnerAdapter {
                         error: AdDisplayError
                     ) {
                         PartnerLogController.log(SHOW_FAILED, "Error: $error")
-                        continuation.resume(Result.failure(ChartboostMediationAdException(ChartboostMediationError.CM_SHOW_FAILURE_UNKNOWN)))
+                        resumeOnce(Result.failure(ChartboostMediationAdException(ChartboostMediationError.CM_SHOW_FAILURE_UNKNOWN)))
 
                         ad.destroy()
                     }
