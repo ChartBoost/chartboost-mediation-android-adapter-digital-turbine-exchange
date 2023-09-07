@@ -550,9 +550,9 @@ class DigitalTurbineExchangeAdapter : PartnerAdapter {
                 PartnerLogController.log(SHOW_FAILED, "Context is not an activity.")
                 false
             }
-            format == AdFormat.BANNER.key -> (ad is BannerView)
-            format == "adaptive_banner" -> (ad is BannerView)
-            format == AdFormat.INTERSTITIAL.key || format == AdFormat.REWARDED.key -> (ad as InneractiveAdSpot).isReady
+            format == AdFormat.BANNER -> (ad is BannerView)
+            format.key == "adaptive_banner" -> (ad is BannerView)
+            format == AdFormat.INTERSTITIAL || format == AdFormat.REWARDED -> (ad as InneractiveAdSpot).isReady
             else -> false
         }
     }
