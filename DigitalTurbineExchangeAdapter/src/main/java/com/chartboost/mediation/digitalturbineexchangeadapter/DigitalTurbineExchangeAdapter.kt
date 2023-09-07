@@ -264,7 +264,7 @@ class DigitalTurbineExchangeAdapter : PartnerAdapter {
         PartnerLogController.log(LOAD_STARTED)
 
         return when (request.format) {
-            AdFormat.BANNER -> {
+            AdFormat.BANNER, AdFormat.ADAPTIVE_BANNER -> {
                 loadBannerAd(context, request, partnerAdListener)
             }
             AdFormat.INTERSTITIAL, AdFormat.REWARDED -> {
@@ -291,7 +291,7 @@ class DigitalTurbineExchangeAdapter : PartnerAdapter {
 
         return when (partnerAd.request.format) {
             // Banner ads do not have a separate "show" mechanism.
-            AdFormat.BANNER -> {
+            AdFormat.BANNER, AdFormat.ADAPTIVE_BANNER -> {
                 PartnerLogController.log(SHOW_SUCCEEDED)
                 Result.success(partnerAd)
             }
@@ -551,6 +551,7 @@ class DigitalTurbineExchangeAdapter : PartnerAdapter {
                 false
             }
             format == AdFormat.BANNER -> (ad is BannerView)
+            format == AdFormat.ADAPTIVE_BANNER -> (ad is BannerView)
             format == AdFormat.INTERSTITIAL || format == AdFormat.REWARDED -> (ad as InneractiveAdSpot).isReady
             else -> false
         }
