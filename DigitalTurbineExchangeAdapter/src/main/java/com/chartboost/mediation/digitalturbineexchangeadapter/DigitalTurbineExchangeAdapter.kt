@@ -263,11 +263,11 @@ class DigitalTurbineExchangeAdapter : PartnerAdapter {
     ): Result<PartnerAd> {
         PartnerLogController.log(LOAD_STARTED)
 
-        return when (request.format) {
-            AdFormat.BANNER, AdFormat.ADAPTIVE_BANNER -> {
+        return when (request.format.key) {
+            AdFormat.BANNER.key, "adaptive_banner" -> {
                 loadBannerAd(context, request, partnerAdListener)
             }
-            AdFormat.INTERSTITIAL, AdFormat.REWARDED -> {
+            AdFormat.INTERSTITIAL.key, AdFormat.REWARDED.key -> {
                 loadFullscreenAd(request, partnerAdListener)
             }
             else -> {
@@ -289,13 +289,13 @@ class DigitalTurbineExchangeAdapter : PartnerAdapter {
         PartnerLogController.log(SHOW_STARTED)
         val listener = listeners.remove(partnerAd.request.identifier)
 
-        return when (partnerAd.request.format) {
+        return when (partnerAd.request.format.key) {
             // Banner ads do not have a separate "show" mechanism.
-            AdFormat.BANNER, AdFormat.ADAPTIVE_BANNER -> {
+            AdFormat.BANNER.key, "adaptive_banner" -> {
                 PartnerLogController.log(SHOW_SUCCEEDED)
                 Result.success(partnerAd)
             }
-            AdFormat.INTERSTITIAL, AdFormat.REWARDED -> showFullscreenAd(
+            AdFormat.INTERSTITIAL.key, AdFormat.REWARDED.key -> showFullscreenAd(
                 context,
                 partnerAd,
                 listener
@@ -550,9 +550,9 @@ class DigitalTurbineExchangeAdapter : PartnerAdapter {
                 PartnerLogController.log(SHOW_FAILED, "Context is not an activity.")
                 false
             }
-            format == AdFormat.BANNER -> (ad is BannerView)
-            format == AdFormat.ADAPTIVE_BANNER -> (ad is BannerView)
-            format == AdFormat.INTERSTITIAL || format == AdFormat.REWARDED -> (ad as InneractiveAdSpot).isReady
+            format == AdFormat.BANNER.key -> (ad is BannerView)
+            format == "adaptive_banner" -> (ad is BannerView)
+            format == AdFormat.INTERSTITIAL.key || format == AdFormat.REWARDED.key -> (ad as InneractiveAdSpot).isReady
             else -> false
         }
     }
