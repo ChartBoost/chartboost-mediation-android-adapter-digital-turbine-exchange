@@ -1,6 +1,6 @@
 /*
  * Copyright 2022-2023 Chartboost, Inc.
- * 
+ *
  * Use of this source code is governed by an MIT-style
  * license that can be found in the LICENSE file.
  */
@@ -36,7 +36,11 @@ android {
         targetSdk = 33
         // If you touch the following line, don't forget to update scripts/get_rc_version.zsh
         android.defaultConfig.versionName = System.getenv("VERSION_OVERRIDE") ?: "4.8.2.4.0"
-        buildConfigField("String", "CHARTBOOST_MEDIATION_DIGITAL_TURBINE_EXCHANGE_ADAPTER_VERSION", "\"${android.defaultConfig.versionName}\"")
+        buildConfigField(
+            "String",
+            "CHARTBOOST_MEDIATION_DIGITAL_TURBINE_EXCHANGE_ADAPTER_VERSION",
+            "\"${android.defaultConfig.versionName}\"",
+        )
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -52,7 +56,7 @@ android {
             isMinifyEnabled = false
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
-                "proguard-rules.pro"
+                "proguard-rules.pro",
             )
         }
     }
@@ -92,10 +96,10 @@ artifactory {
                 setRepoKey("private-chartboost-mediation")
             }
             // Set the environment variables for these to be able to push to artifactory.
-            System.getenv("JFROG_USER")?.let{
+            System.getenv("JFROG_USER")?.let {
                 setUsername(it)
             }
-            System.getenv("JFROG_PASS")?.let{
+            System.getenv("JFROG_PASS")?.let {
                 setPassword(it)
             }
         }
@@ -117,11 +121,12 @@ afterEvaluate {
                 val adapterName = "digital-turbine-exchange"
                 groupId = "com.chartboost"
                 artifactId = "chartboost-mediation-adapter-$adapterName"
-                version = if (project.hasProperty("snapshot")) {
-                    android.defaultConfig.versionName + rootProject.ext["SNAPSHOT"]
-                } else {
-                    android.defaultConfig.versionName
-                }
+                version =
+                    if (project.hasProperty("snapshot")) {
+                        android.defaultConfig.versionName + rootProject.ext["SNAPSHOT"]
+                    } else {
+                        android.defaultConfig.versionName
+                    }
 
                 pom {
                     name.set("Chartboost Mediation Adapter Digital Turbine Exchange")
