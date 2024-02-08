@@ -18,10 +18,12 @@ import com.chartboost.heliumsdk.utils.PartnerLogController.PartnerAdapterEvents.
 import com.fyber.inneractive.sdk.external.*
 import com.fyber.inneractive.sdk.external.InneractiveAdSpot.RequestListener
 import com.fyber.inneractive.sdk.external.InneractiveUnitController.AdDisplayError
+import kotlinx.coroutines.CancellableContinuation
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.decodeFromJsonElement
+import java.lang.ref.WeakReference
 import kotlin.coroutines.resume
 
 /**
@@ -81,6 +83,24 @@ class DigitalTurbineExchangeAdapter : PartnerAdapter {
          * Key for identifying the mediation platform (Chartboost) to the partner.
          */
         private const val MEDIATOR_NAME = "Chartboost"
+
+        /**
+         * Convert a given Digital Turbine Exchange error code into a [ChartboostMediationError].
+         *
+         * @param error The Digital Turbine Exchange error code.
+         *
+         * @return The corresponding [ChartboostMediationError].
+         */
+        private fun getChartboostMediationError(error: InneractiveErrorCode?) =
+            when (error) {
+                InneractiveErrorCode.NO_FILL -> ChartboostMediationError.CM_LOAD_FAILURE_NO_FILL
+                InneractiveErrorCode.CONNECTION_ERROR -> ChartboostMediationError.CM_NO_CONNECTIVITY
+                InneractiveErrorCode.SERVER_INTERNAL_ERROR -> ChartboostMediationError.CM_AD_SERVER_ERROR
+                InneractiveErrorCode.SERVER_INVALID_RESPONSE -> ChartboostMediationError.CM_LOAD_FAILURE_INVALID_BID_RESPONSE
+                InneractiveErrorCode.LOAD_TIMEOUT -> ChartboostMediationError.CM_LOAD_FAILURE_TIMEOUT
+                InneractiveErrorCode.ERROR_CODE_NATIVE_VIDEO_NOT_SUPPORTED -> ChartboostMediationError.CM_LOAD_FAILURE_MISMATCHED_AD_FORMAT
+                else -> ChartboostMediationError.CM_PARTNER_ERROR
+            }
     }
 
     /**
@@ -525,34 +545,10 @@ class DigitalTurbineExchangeAdapter : PartnerAdapter {
 
         return suspendCancellableCoroutine { continuation ->
             videoSpot.setRequestListener(
-                object : RequestListener {
-                    fun resumeOnce(result: Result<PartnerAd>) {
-                        if (continuation.isActive) {
-                            continuation.resume(result)
-                        }
-                    }
-
-                    override fun onInneractiveSuccessfulAdRequest(adSpot: InneractiveAdSpot) {
-                        PartnerLogController.log(LOAD_SUCCEEDED)
-                        resumeOnce(
-                            Result.success(
-                                PartnerAd(
-                                    ad = adSpot,
-                                    details = emptyMap(),
-                                    request = request,
-                                ),
-                            ),
-                        )
-                    }
-
-                    override fun onInneractiveFailedAdRequest(
-                        adSpot: InneractiveAdSpot,
-                        errorCode: InneractiveErrorCode,
-                    ) {
-                        PartnerLogController.log(LOAD_FAILED, "Ad spot $adSpot. Error code: $errorCode")
-                        resumeOnce(Result.failure(ChartboostMediationAdException(getChartboostMediationError(errorCode))))
-                    }
-                },
+                InterstitialAdLoadListener(
+                    WeakReference(continuation),
+                    request = request,
+                ),
             )
 
             videoSpot.requestAd(InneractiveAdRequest(request.partnerPlacement))
@@ -611,88 +607,11 @@ class DigitalTurbineExchangeAdapter : PartnerAdapter {
 
             return suspendCancellableCoroutine { continuation ->
                 controller.eventsListener =
-                    object : InneractiveFullscreenAdEventsListener {
-                        fun resumeOnce(result: Result<PartnerAd>) {
-                            if (continuation.isActive) {
-                                continuation.resume(result)
-                            }
-                        }
-
-                        override fun onAdImpression(ad: InneractiveAdSpot) {
-                            PartnerLogController.log(DID_TRACK_IMPRESSION)
-                            listener?.onPartnerAdImpression(
-                                PartnerAd(
-                                    ad = ad,
-                                    details = emptyMap(),
-                                    request = partnerAd.request,
-                                ),
-                            ) ?: PartnerLogController.log(
-                                CUSTOM,
-                                "Unable to fire onPartnerAdImpression for Digital Turbine Exchange " +
-                                    "adapter. Listener is null",
-                            )
-
-                            PartnerLogController.log(SHOW_SUCCEEDED)
-                            resumeOnce(
-                                Result.success(
-                                    PartnerAd(
-                                        ad = ad,
-                                        details = emptyMap(),
-                                        request = partnerAd.request,
-                                    ),
-                                ),
-                            )
-                        }
-
-                        override fun onAdClicked(ad: InneractiveAdSpot) {
-                            PartnerLogController.log(DID_CLICK)
-                            listener?.onPartnerAdClicked(
-                                PartnerAd(
-                                    ad = ad,
-                                    details = emptyMap(),
-                                    request = partnerAd.request,
-                                ),
-                            ) ?: PartnerLogController.log(
-                                CUSTOM,
-                                "Unable to fire onPartnerAdClicked for Digital Turbine Exchange " +
-                                    "adapter. Listener is null.",
-                            )
-                        }
-
-                        override fun onAdWillCloseInternalBrowser(ad: InneractiveAdSpot) {
-                        }
-
-                        override fun onAdWillOpenExternalApp(ad: InneractiveAdSpot) {
-                        }
-
-                        override fun onAdEnteredErrorState(
-                            ad: InneractiveAdSpot,
-                            error: AdDisplayError,
-                        ) {
-                            PartnerLogController.log(SHOW_FAILED, "Error: $error")
-                            resumeOnce(Result.failure(ChartboostMediationAdException(ChartboostMediationError.CM_SHOW_FAILURE_UNKNOWN)))
-
-                            ad.destroy()
-                        }
-
-                        override fun onAdDismissed(ad: InneractiveAdSpot) {
-                            PartnerLogController.log(DID_DISMISS)
-                            listener?.onPartnerAdDismissed(
-                                PartnerAd(
-                                    ad = ad,
-                                    details = emptyMap(),
-                                    request = partnerAd.request,
-                                ),
-                                null,
-                            ) ?: PartnerLogController.log(
-                                CUSTOM,
-                                "Unable to fire onPartnerAdDismissed for Digital Turbine Exchange adapter. Listener " +
-                                    "is null.",
-                            )
-
-                            ad.destroy()
-                        }
-                    }
+                    InterstitialAdShowListener(
+                        WeakReference(continuation),
+                        listener = listener,
+                        partnerAd = partnerAd
+                    )
 
                 controller.rewardedListener =
                     InneractiveFullScreenAdRewardedListener {
@@ -748,20 +667,148 @@ class DigitalTurbineExchangeAdapter : PartnerAdapter {
     }
 
     /**
-     * Convert a given Digital Turbine Exchange error code into a [ChartboostMediationError].
+     * Callback for loading interstitial ads.
      *
-     * @param error The Digital Turbine Exchange error code.
-     *
-     * @return The corresponding [ChartboostMediationError].
+     * @param continuationRef A [WeakReference] to the [CancellableContinuation] to be resumed once the ad is shown.
+     * @param request A [PartnerAdLoadRequest] object containing the request.
      */
-    private fun getChartboostMediationError(error: InneractiveErrorCode?) =
-        when (error) {
-            InneractiveErrorCode.NO_FILL -> ChartboostMediationError.CM_LOAD_FAILURE_NO_FILL
-            InneractiveErrorCode.CONNECTION_ERROR -> ChartboostMediationError.CM_NO_CONNECTIVITY
-            InneractiveErrorCode.SERVER_INTERNAL_ERROR -> ChartboostMediationError.CM_AD_SERVER_ERROR
-            InneractiveErrorCode.SERVER_INVALID_RESPONSE -> ChartboostMediationError.CM_LOAD_FAILURE_INVALID_BID_RESPONSE
-            InneractiveErrorCode.LOAD_TIMEOUT -> ChartboostMediationError.CM_LOAD_FAILURE_TIMEOUT
-            InneractiveErrorCode.ERROR_CODE_NATIVE_VIDEO_NOT_SUPPORTED -> ChartboostMediationError.CM_LOAD_FAILURE_MISMATCHED_AD_FORMAT
-            else -> ChartboostMediationError.CM_PARTNER_ERROR
+    private class InterstitialAdLoadListener(
+        private val continuationRef: WeakReference<CancellableContinuation<Result<PartnerAd>>>,
+        private val request: PartnerAdLoadRequest,
+    ): RequestListener {
+        fun resumeOnce(result: Result<PartnerAd>) {
+            continuationRef.get()?.let {
+                if (it.isActive) {
+                    it.resume(result)
+                }
+            } ?: run {
+                PartnerLogController.log(
+                    LOAD_FAILED,
+                    "Unable to resume continuation. Continuation is null."
+                )
+            }
         }
+
+        override fun onInneractiveSuccessfulAdRequest(adSpot: InneractiveAdSpot) {
+            PartnerLogController.log(LOAD_SUCCEEDED)
+            resumeOnce(
+                Result.success(
+                    PartnerAd(
+                        ad = adSpot,
+                        details = emptyMap(),
+                        request = request,
+                    ),
+                ),
+            )
+        }
+
+        override fun onInneractiveFailedAdRequest(
+            adSpot: InneractiveAdSpot,
+            errorCode: InneractiveErrorCode,
+        ) {
+            PartnerLogController.log(LOAD_FAILED, "Ad spot $adSpot. Error code: $errorCode")
+            resumeOnce(Result.failure(ChartboostMediationAdException(getChartboostMediationError(errorCode))))
+        }
+    }
+
+    /**
+     * Callback for showing interstitial ads.
+     *
+     * @param continuationRef A [WeakReference] to the [CancellableContinuation] to be resumed once the ad is shown.
+     * @param listener A [PartnerAdListener] to be notified of ad events.
+     * @param partnerAd A [PartnerAd] object containing the ad to show.
+     */
+    private class InterstitialAdShowListener(
+        private val continuationRef: WeakReference<CancellableContinuation<Result<PartnerAd>>>,
+        private val listener: PartnerAdListener?,
+        private val partnerAd: PartnerAd,
+    ): InneractiveFullscreenAdEventsListener {
+        fun resumeOnce(result: Result<PartnerAd>) {
+            continuationRef.get()?.let {
+                if (it.isActive) {
+                    it.resume(result)
+                }
+            } ?: run {
+                PartnerLogController.log(
+                    SHOW_FAILED,
+                    "Unable to resume continuation. Continuation is null."
+                )
+            }
+        }
+
+        override fun onAdImpression(ad: InneractiveAdSpot) {
+            PartnerLogController.log(DID_TRACK_IMPRESSION)
+            listener?.onPartnerAdImpression(
+                PartnerAd(
+                    ad = ad,
+                    details = emptyMap(),
+                    request = partnerAd.request,
+                ),
+            ) ?: PartnerLogController.log(
+                CUSTOM,
+                "Unable to fire onPartnerAdImpression for Digital Turbine Exchange " +
+                        "adapter. Listener is null",
+            )
+
+            PartnerLogController.log(SHOW_SUCCEEDED)
+            resumeOnce(
+                Result.success(
+                    PartnerAd(
+                        ad = ad,
+                        details = emptyMap(),
+                        request = partnerAd.request,
+                    ),
+                ),
+            )
+        }
+
+        override fun onAdClicked(ad: InneractiveAdSpot) {
+            PartnerLogController.log(DID_CLICK)
+            listener?.onPartnerAdClicked(
+                PartnerAd(
+                    ad = ad,
+                    details = emptyMap(),
+                    request = partnerAd.request,
+                ),
+            ) ?: PartnerLogController.log(
+                CUSTOM,
+                "Unable to fire onPartnerAdClicked for Digital Turbine Exchange " +
+                        "adapter. Listener is null.",
+            )
+        }
+
+        override fun onAdWillCloseInternalBrowser(ad: InneractiveAdSpot) {
+        }
+
+        override fun onAdWillOpenExternalApp(ad: InneractiveAdSpot) {
+        }
+
+        override fun onAdEnteredErrorState(
+            ad: InneractiveAdSpot,
+            error: AdDisplayError,
+        ) {
+            PartnerLogController.log(SHOW_FAILED, "Error: $error")
+            resumeOnce(Result.failure(ChartboostMediationAdException(ChartboostMediationError.CM_SHOW_FAILURE_UNKNOWN)))
+
+            ad.destroy()
+        }
+
+        override fun onAdDismissed(ad: InneractiveAdSpot) {
+            PartnerLogController.log(DID_DISMISS)
+            listener?.onPartnerAdDismissed(
+                PartnerAd(
+                    ad = ad,
+                    details = emptyMap(),
+                    request = partnerAd.request,
+                ),
+                null,
+            ) ?: PartnerLogController.log(
+                CUSTOM,
+                "Unable to fire onPartnerAdDismissed for Digital Turbine Exchange adapter. Listener " +
+                        "is null.",
+            )
+
+            ad.destroy()
+        }
+    }
 }
