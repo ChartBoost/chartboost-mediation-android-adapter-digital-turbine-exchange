@@ -19,7 +19,7 @@ import com.fyber.inneractive.sdk.external.*
 import com.fyber.inneractive.sdk.external.InneractiveAdSpot.RequestListener
 import com.fyber.inneractive.sdk.external.InneractiveUnitController.AdDisplayError
 import kotlinx.coroutines.CancellableContinuation
-import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Dispatchers.IO
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
@@ -154,7 +154,7 @@ class DigitalTurbineExchangeAdapter : PartnerAdapter {
     override suspend fun setUp(
         context: Context,
         partnerConfiguration: PartnerConfiguration,
-    ): Result<Unit> = withContext(Dispatchers.IO) {
+    ): Result<Unit> = withContext(IO) {
         PartnerLogController.log(SETUP_STARTED)
 
         return@withContext suspendCancellableCoroutine { continuation ->
