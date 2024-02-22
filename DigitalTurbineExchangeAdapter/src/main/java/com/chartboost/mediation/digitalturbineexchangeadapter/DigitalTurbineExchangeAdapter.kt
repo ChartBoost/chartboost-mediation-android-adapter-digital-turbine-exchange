@@ -1,6 +1,6 @@
 /*
  * Copyright 2023-2024 Chartboost, Inc.
- * 
+ *
  * Use of this source code is governed by an MIT-style
  * license that can be found in the LICENSE file.
  */
@@ -11,10 +11,10 @@ import android.app.Activity
 import android.content.Context
 import android.util.Log
 import android.widget.FrameLayout
-import com.chartboost.heliumsdk.HeliumSdk
-import com.chartboost.heliumsdk.domain.*
-import com.chartboost.heliumsdk.utils.PartnerLogController
-import com.chartboost.heliumsdk.utils.PartnerLogController.PartnerAdapterEvents.*
+import com.chartboost.chartboostmediationsdk.ChartboostMediationSdk
+import com.chartboost.chartboostmediationsdk.domain.*
+import com.chartboost.chartboostmediationsdk.utils.PartnerLogController
+import com.chartboost.chartboostmediationsdk.utils.PartnerLogController.PartnerAdapterEvents.*
 import com.fyber.inneractive.sdk.external.*
 import com.fyber.inneractive.sdk.external.InneractiveAdSpot.RequestListener
 import com.fyber.inneractive.sdk.external.InneractiveUnitController.AdDisplayError
@@ -385,7 +385,7 @@ class DigitalTurbineExchangeAdapter : PartnerAdapter {
 
         adSpot.addUnitController(unitController)
         adSpot.setMediationName(MEDIATOR_NAME)
-        adSpot.mediationVersion = HeliumSdk.getVersion()
+        adSpot.mediationVersion = ChartboostMediationSdk.getVersion()
 
         return suspendCancellableCoroutine { continuation ->
             adSpot.setRequestListener(
