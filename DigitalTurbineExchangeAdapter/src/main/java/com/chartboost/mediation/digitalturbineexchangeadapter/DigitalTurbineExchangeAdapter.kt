@@ -294,13 +294,13 @@ class DigitalTurbineExchangeAdapter : PartnerAdapter {
     /**
      * Attempt to show the currently loaded Digital Turbine Exchange ad.
      *
-     * @param context The current [Context]
+     * @param activity The current [Activity]
      * @param partnerAd The [PartnerAd] object containing the ad to be shown.
      *
      * @return Result.success(PartnerAd) if the ad was successfully shown, Result.failure(Exception) otherwise.
      */
     override suspend fun show(
-        context: Context,
+        activity: Activity,
         partnerAd: PartnerAd,
     ): Result<PartnerAd> {
         PartnerLogController.log(SHOW_STARTED)
@@ -314,7 +314,7 @@ class DigitalTurbineExchangeAdapter : PartnerAdapter {
             }
             AdFormat.INTERSTITIAL.key, AdFormat.REWARDED.key ->
                 showFullscreenAd(
-                    context,
+                    activity,
                     partnerAd,
                     listener,
                 )
@@ -562,22 +562,16 @@ class DigitalTurbineExchangeAdapter : PartnerAdapter {
     /**
      * Determine if a Digital Turbine Exchange ad is ready to show.
      *
-     * @param context The current [Context].
      * @param format The format of the ad to be shown.
      * @param ad The generic Digital Turbine Exchange ad object.
      *
      * @return True if the ad is ready to show, false otherwise.
      */
     private fun readyToShow(
-        context: Context,
         format: AdFormat,
         ad: Any?,
     ): Boolean {
         return when {
-            context !is Activity -> {
-                PartnerLogController.log(SHOW_FAILED, "Context is not an activity.")
-                false
-            }
             format == AdFormat.BANNER -> (ad is BannerView)
             format.key == "adaptive_banner" -> (ad is BannerView)
             format == AdFormat.INTERSTITIAL || format == AdFormat.REWARDED -> (ad as InneractiveAdSpot).isReady
@@ -588,18 +582,18 @@ class DigitalTurbineExchangeAdapter : PartnerAdapter {
     /**
      * Attempt to show a Digital Turbine Exchange fullscreen ad.
      *
-     * @param context The current [Context].
+     * @param activity The current [Activity].
      * @param partnerAd The [PartnerAd] object containing the Digital Turbine Exchange ad to be shown.
      * @param listener A [PartnerAdListener] to notify Chartboost Mediation of ad events.
      *
      * @return Result.success(PartnerAd) if the ad was successfully shown, Result.failure(Exception) otherwise.
      */
     private suspend fun showFullscreenAd(
-        context: Context,
+        activity: Activity,
         partnerAd: PartnerAd,
         listener: PartnerAdListener?,
     ): Result<PartnerAd> {
-        if (!readyToShow(context, partnerAd.request.format, partnerAd.ad)) {
+        if (!readyToShow(partnerAd.request.format, partnerAd.ad)) {
             PartnerLogController.log(SHOW_FAILED, "Ad is not ready.")
             return Result.failure(ChartboostMediationAdException(ChartboostMediationError.CM_SHOW_FAILURE_AD_NOT_READY))
         }
@@ -704,7 +698,7 @@ class DigitalTurbineExchangeAdapter : PartnerAdapter {
                         )
                     }
 
-                controller.show(context as Activity)
+                controller.show(activity)
             }
         } ?: run {
             PartnerLogController.log(SHOW_FAILED, "Ad is not an InneractiveAdSpot.")
