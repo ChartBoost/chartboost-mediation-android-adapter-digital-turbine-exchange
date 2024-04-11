@@ -3,6 +3,18 @@
 Note the first digit of every adapter version corresponds to the major version of the Chartboost Mediation SDK compatible with that adapter. 
 Adapters are compatible with any Chartboost Mediation SDK version within that major version.
 
+### 4.8.2.7.0
+- This version of the adapter has been certified with Digital Turbine Exchange SDK 8.2.7.
+
+### 4.8.2.6.0
+- This version of the adapter has been certified with Digital Turbine Exchange SDK 8.2.6.
+
+### 4.8.2.5.2
+- Performs initialization on `IO` to help reduce potential ANR issues.
+
+### 4.8.2.5.1
+- Fix memory leaks that could occur when fullscreen ads are shown from an `Activity`.
+
 ### 4.8.2.5.0
 - This version of the adapter has been certified with Digital Turbine Exchange SDK 8.2.5.
 
