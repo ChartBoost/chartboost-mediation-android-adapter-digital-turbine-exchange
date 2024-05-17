@@ -43,15 +43,15 @@ object DigitalTurbineExchangeAdapterConfiguration : PartnerAdapterConfiguration 
             field = value
             InneractiveAdManager.setMuteVideo(value)
             PartnerLogController.log(
-                    PartnerLogController.PartnerAdapterEvents.CUSTOM,
-                    "Digital Turbine Exchange video creatives will be " +
-                            "${
-                                if (value) {
-                                    "muted"
-                                } else {
-                                    "unmuted"
-                                }
-                            }.",
+                PartnerLogController.PartnerAdapterEvents.CUSTOM,
+                "Digital Turbine Exchange video creatives will be " +
+                    "${
+                        if (value) {
+                            "muted"
+                        } else {
+                            "unmuted"
+                        }
+                    }.",
             )
         }
 
@@ -63,18 +63,18 @@ object DigitalTurbineExchangeAdapterConfiguration : PartnerAdapterConfiguration 
     fun setLogLevel(level: Int) {
         InneractiveAdManager.setLogLevel(level)
         PartnerLogController.log(
-                PartnerLogController.PartnerAdapterEvents.CUSTOM,
-                "Digital Turbine Exchange log level set to ${
-                    when (level) {
-                        Log.VERBOSE -> "Log.VERBOSE"
-                        Log.DEBUG -> "Log.DEBUG"
-                        Log.INFO -> "Log.INFO"
-                        Log.WARN -> "Log.WARN"
-                        Log.ERROR -> "Log.ERROR"
-                        Log.ASSERT -> "Log.ASSERT"
-                        else -> "UNKNOWN"
-                    }
-                }.",
+            PartnerLogController.PartnerAdapterEvents.CUSTOM,
+            "Digital Turbine Exchange log level set to ${
+                when (level) {
+                    Log.VERBOSE -> "Log.VERBOSE"
+                    Log.DEBUG -> "Log.DEBUG"
+                    Log.INFO -> "Log.INFO"
+                    Log.WARN -> "Log.WARN"
+                    Log.ERROR -> "Log.ERROR"
+                    Log.ASSERT -> "Log.ASSERT"
+                    else -> "UNKNOWN"
+                }
+            }.",
         )
     }
 }
