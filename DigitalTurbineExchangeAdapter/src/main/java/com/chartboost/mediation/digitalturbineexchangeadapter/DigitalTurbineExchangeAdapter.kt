@@ -84,7 +84,7 @@ class partnerSdkVersionDigitalTurbineExchangeAdapter : PartnerAdapter {
                 } ?: run {
                 PartnerLogController.log(SETUP_FAILED, "Missing app ID.")
                 resumeOnce(
-                    Result.failure(ChartboostMediationAdException(ChartboostMediationError.CM_INITIALIZATION_FAILURE_INVALID_CREDENTIALS)),
+                    Result.failure(ChartboostMediationAdException(ChartboostMediationError.InitializationError.InvalidCredentials)),
                 )
             }
         }
@@ -214,7 +214,7 @@ class partnerSdkVersionDigitalTurbineExchangeAdapter : PartnerAdapter {
             }
             else -> {
                 PartnerLogController.log(LOAD_FAILED)
-                Result.failure(ChartboostMediationAdException(ChartboostMediationError.CM_LOAD_FAILURE_UNSUPPORTED_AD_FORMAT))
+                Result.failure(ChartboostMediationAdException(ChartboostMediationError.LoadError.UnsupportedAdFormat))
             }
         }
     }
@@ -248,7 +248,7 @@ class partnerSdkVersionDigitalTurbineExchangeAdapter : PartnerAdapter {
                 )
             else -> {
                 PartnerLogController.log(SHOW_FAILED)
-                Result.failure(ChartboostMediationAdException(ChartboostMediationError.CM_SHOW_FAILURE_UNSUPPORTED_AD_FORMAT))
+                Result.failure(ChartboostMediationAdException(ChartboostMediationError.ShowError.UnsupportedAdFormat))
             }
         }
     }
@@ -285,11 +285,11 @@ class partnerSdkVersionDigitalTurbineExchangeAdapter : PartnerAdapter {
             }
             OnFyberMarketplaceInitializedListener.FyberInitStatus.FAILED_NO_KITS_DETECTED -> {
                 PartnerLogController.log(SETUP_FAILED, "No kits detected.")
-                Result.failure(ChartboostMediationAdException(ChartboostMediationError.CM_INITIALIZATION_FAILURE_UNKNOWN))
+                Result.failure(ChartboostMediationAdException(ChartboostMediationError.InitializationError.Unknown))
             }
             OnFyberMarketplaceInitializedListener.FyberInitStatus.INVALID_APP_ID -> {
                 PartnerLogController.log(SETUP_FAILED, "Invalid app ID.")
-                Result.failure(ChartboostMediationAdException(ChartboostMediationError.CM_INITIALIZATION_FAILURE_INVALID_CREDENTIALS))
+                Result.failure(ChartboostMediationAdException(ChartboostMediationError.InitializationError.InvalidCredentials))
             }
         }
     }
@@ -334,7 +334,7 @@ class partnerSdkVersionDigitalTurbineExchangeAdapter : PartnerAdapter {
 
                                 Result.failure(
                                     ChartboostMediationAdException(
-                                        ChartboostMediationError.CM_LOAD_FAILURE_MISMATCHED_AD_PARAMS,
+                                        ChartboostMediationError.LoadError.MismatchedAdFormat,
                                     ),
                                 )
                             } else {
@@ -523,13 +523,13 @@ class partnerSdkVersionDigitalTurbineExchangeAdapter : PartnerAdapter {
     ): Result<PartnerAd> {
         if (!readyToShow(partnerAd.request.format, partnerAd.ad)) {
             PartnerLogController.log(SHOW_FAILED, "Ad is not ready.")
-            return Result.failure(ChartboostMediationAdException(ChartboostMediationError.CM_SHOW_FAILURE_AD_NOT_READY))
+            return Result.failure(ChartboostMediationAdException(ChartboostMediationError.ShowError.AdNotReady))
         }
 
         (partnerAd.ad as? InneractiveAdSpot)?.let { adSpot ->
             val controller =
                 adSpot.selectedUnitController as? InneractiveFullscreenUnitController
-                    ?: return Result.failure(ChartboostMediationAdException(ChartboostMediationError.CM_SHOW_FAILURE_WRONG_RESOURCE_TYPE))
+                    ?: return Result.failure(ChartboostMediationAdException(ChartboostMediationError.ShowError.WrongResourceType))
 
             return suspendCancellableCoroutine { continuation ->
                 controller.eventsListener =
@@ -592,7 +592,7 @@ class partnerSdkVersionDigitalTurbineExchangeAdapter : PartnerAdapter {
                             error: AdDisplayError,
                         ) {
                             PartnerLogController.log(SHOW_FAILED, "Error: $error")
-                            resumeOnce(Result.failure(ChartboostMediationAdException(ChartboostMediationError.CM_SHOW_FAILURE_UNKNOWN)))
+                            resumeOnce(Result.failure(ChartboostMediationAdException(ChartboostMediationError.ShowError.Unknown)))
 
                             ad.destroy()
                         }
@@ -630,7 +630,7 @@ class partnerSdkVersionDigitalTurbineExchangeAdapter : PartnerAdapter {
             }
         } ?: run {
             PartnerLogController.log(SHOW_FAILED, "Ad is not an InneractiveAdSpot.")
-            return Result.failure(ChartboostMediationAdException(ChartboostMediationError.CM_SHOW_FAILURE_WRONG_RESOURCE_TYPE))
+            return Result.failure(ChartboostMediationAdException(ChartboostMediationError.ShowError.WrongResourceType))
         }
     }
 
@@ -656,7 +656,7 @@ class partnerSdkVersionDigitalTurbineExchangeAdapter : PartnerAdapter {
                         "Ad is neither a BannerView nor an InneractiveAdSpot.",
                     )
                     return Result.failure(
-                        ChartboostMediationAdException(ChartboostMediationError.CM_INVALIDATE_FAILURE_WRONG_RESOURCE_TYPE),
+                        ChartboostMediationAdException(ChartboostMediationError.InvalidateError.WrongResourceType),
                     )
                 }
             }
@@ -665,7 +665,7 @@ class partnerSdkVersionDigitalTurbineExchangeAdapter : PartnerAdapter {
             Result.success(partnerAd)
         } ?: run {
             PartnerLogController.log(INVALIDATE_FAILED, "Ad is null.")
-            Result.failure(ChartboostMediationAdException(ChartboostMediationError.CM_INVALIDATE_FAILURE_AD_NOT_FOUND))
+            Result.failure(ChartboostMediationAdException(ChartboostMediationError.InvalidateError.AdNotFound))
         }
     }
 
@@ -678,12 +678,12 @@ class partnerSdkVersionDigitalTurbineExchangeAdapter : PartnerAdapter {
      */
     private fun getChartboostMediationError(error: InneractiveErrorCode?) =
         when (error) {
-            InneractiveErrorCode.NO_FILL -> ChartboostMediationError.CM_LOAD_FAILURE_NO_FILL
-            InneractiveErrorCode.CONNECTION_ERROR -> ChartboostMediationError.CM_NO_CONNECTIVITY
-            InneractiveErrorCode.SERVER_INTERNAL_ERROR -> ChartboostMediationError.CM_AD_SERVER_ERROR
-            InneractiveErrorCode.SERVER_INVALID_RESPONSE -> ChartboostMediationError.CM_LOAD_FAILURE_INVALID_BID_RESPONSE
-            InneractiveErrorCode.LOAD_TIMEOUT -> ChartboostMediationError.CM_LOAD_FAILURE_TIMEOUT
-            InneractiveErrorCode.ERROR_CODE_NATIVE_VIDEO_NOT_SUPPORTED -> ChartboostMediationError.CM_LOAD_FAILURE_MISMATCHED_AD_FORMAT
-            else -> ChartboostMediationError.CM_PARTNER_ERROR
+            InneractiveErrorCode.NO_FILL -> ChartboostMediationError.LoadError.NoFill
+            InneractiveErrorCode.CONNECTION_ERROR -> ChartboostMediationError.OtherError.NoConnectivity
+            InneractiveErrorCode.SERVER_INTERNAL_ERROR -> ChartboostMediationError.OtherError.AdServerError
+            InneractiveErrorCode.SERVER_INVALID_RESPONSE -> ChartboostMediationError.LoadError.InvalidBidResponse
+            InneractiveErrorCode.LOAD_TIMEOUT -> ChartboostMediationError.LoadError.AdRequestTimeout
+            InneractiveErrorCode.ERROR_CODE_NATIVE_VIDEO_NOT_SUPPORTED -> ChartboostMediationError.LoadError.MismatchedAdFormat
+            else -> ChartboostMediationError.OtherError.PartnerError
         }
 }
