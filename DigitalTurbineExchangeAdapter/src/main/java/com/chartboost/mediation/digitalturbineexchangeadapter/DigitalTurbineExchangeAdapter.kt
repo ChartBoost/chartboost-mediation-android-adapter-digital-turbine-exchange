@@ -235,10 +235,12 @@ class DigitalTurbineExchangeAdapter : PartnerAdapter {
         modifiedKeys: Set<ConsentKey>
     ) {
         consents[ConsentKeys.TCF]?.let {
+            PartnerLogController.log(CUSTOM, "${PartnerLogController.PRIVACY_TAG} TCF String set")
             InneractiveAdManager.setGdprConsentString(it)
         }
 
         consents[ConsentKeys.USP]?.let {
+            PartnerLogController.log(CUSTOM, "${PartnerLogController.PRIVACY_TAG} USP String: $it")
             InneractiveAdManager.setUSPrivacyString(it)
         }
     }
