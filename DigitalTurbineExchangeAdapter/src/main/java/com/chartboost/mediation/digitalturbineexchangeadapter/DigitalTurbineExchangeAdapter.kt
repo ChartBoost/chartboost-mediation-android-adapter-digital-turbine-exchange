@@ -13,7 +13,30 @@ import android.widget.FrameLayout
 import com.chartboost.chartboostmediationsdk.ChartboostMediationSdk
 import com.chartboost.chartboostmediationsdk.domain.*
 import com.chartboost.chartboostmediationsdk.utils.PartnerLogController
-import com.chartboost.chartboostmediationsdk.utils.PartnerLogController.PartnerAdapterEvents.*
+import com.chartboost.chartboostmediationsdk.utils.PartnerLogController.PartnerAdapterEvents.BIDDER_INFO_FETCH_STARTED
+import com.chartboost.chartboostmediationsdk.utils.PartnerLogController.PartnerAdapterEvents.BIDDER_INFO_FETCH_SUCCEEDED
+import com.chartboost.chartboostmediationsdk.utils.PartnerLogController.PartnerAdapterEvents.CUSTOM
+import com.chartboost.chartboostmediationsdk.utils.PartnerLogController.PartnerAdapterEvents.DID_CLICK
+import com.chartboost.chartboostmediationsdk.utils.PartnerLogController.PartnerAdapterEvents.DID_DISMISS
+import com.chartboost.chartboostmediationsdk.utils.PartnerLogController.PartnerAdapterEvents.DID_REWARD
+import com.chartboost.chartboostmediationsdk.utils.PartnerLogController.PartnerAdapterEvents.DID_TRACK_IMPRESSION
+import com.chartboost.chartboostmediationsdk.utils.PartnerLogController.PartnerAdapterEvents.INVALIDATE_FAILED
+import com.chartboost.chartboostmediationsdk.utils.PartnerLogController.PartnerAdapterEvents.INVALIDATE_STARTED
+import com.chartboost.chartboostmediationsdk.utils.PartnerLogController.PartnerAdapterEvents.INVALIDATE_SUCCEEDED
+import com.chartboost.chartboostmediationsdk.utils.PartnerLogController.PartnerAdapterEvents.LOAD_FAILED
+import com.chartboost.chartboostmediationsdk.utils.PartnerLogController.PartnerAdapterEvents.LOAD_STARTED
+import com.chartboost.chartboostmediationsdk.utils.PartnerLogController.PartnerAdapterEvents.LOAD_SUCCEEDED
+import com.chartboost.chartboostmediationsdk.utils.PartnerLogController.PartnerAdapterEvents.SETUP_FAILED
+import com.chartboost.chartboostmediationsdk.utils.PartnerLogController.PartnerAdapterEvents.SETUP_STARTED
+import com.chartboost.chartboostmediationsdk.utils.PartnerLogController.PartnerAdapterEvents.SETUP_SUCCEEDED
+import com.chartboost.chartboostmediationsdk.utils.PartnerLogController.PartnerAdapterEvents.SHOW_FAILED
+import com.chartboost.chartboostmediationsdk.utils.PartnerLogController.PartnerAdapterEvents.SHOW_STARTED
+import com.chartboost.chartboostmediationsdk.utils.PartnerLogController.PartnerAdapterEvents.SHOW_SUCCEEDED
+import com.chartboost.chartboostmediationsdk.utils.PartnerLogController.PartnerAdapterEvents.USER_IS_NOT_UNDERAGE
+import com.chartboost.chartboostmediationsdk.utils.PartnerLogController.PartnerAdapterEvents.USER_IS_UNDERAGE
+import com.chartboost.core.consent.ConsentKey
+import com.chartboost.core.consent.ConsentKeys
+import com.chartboost.core.consent.ConsentValue
 import com.fyber.inneractive.sdk.external.*
 import com.fyber.inneractive.sdk.external.InneractiveAdSpot.RequestListener
 import com.fyber.inneractive.sdk.external.InneractiveUnitController.AdDisplayError
@@ -30,7 +53,7 @@ import kotlin.coroutines.resume
 /**
  * The Chartboost Mediation Digital Turbine Exchange adapter
  */
-class partnerSdkVersionDigitalTurbineExchangeAdapter : PartnerAdapter {
+class DigitalTurbineExchangeAdapter : PartnerAdapter {
     companion object {
         /**
          * Key for parsing the Digital Turbine Exchange app ID.
@@ -82,11 +105,11 @@ class partnerSdkVersionDigitalTurbineExchangeAdapter : PartnerAdapter {
     override suspend fun setUp(
         context: Context,
         partnerConfiguration: PartnerConfiguration,
-    ): Result<Unit> = withContext(IO) {
+    ): Result<Map<String, Any>> = withContext(IO) {
         PartnerLogController.log(SETUP_STARTED)
 
         return@withContext suspendCancellableCoroutine { continuation ->
-            fun resumeOnce(result: Result<Unit>) {
+            fun resumeOnce(result: Result<Map<String, Any>>) {
                 if (continuation.isActive) {
                     continuation.resume(result)
                 }
@@ -113,81 +136,20 @@ class partnerSdkVersionDigitalTurbineExchangeAdapter : PartnerAdapter {
     }
 
     /**
-     * Notify the Digital Turbine Exchange SDK of the GDPR applicability and consent status.
-     *
-     * @param context The current [Context].
-     * @param applies True if GDPR applies, false otherwise.
-     * @param gdprConsentStatus The user's GDPR consent status.
-     */
-    override fun setGdpr(
-        context: Context,
-        applies: Boolean?,
-        gdprConsentStatus: GdprConsentStatus,
-    ) {
-        PartnerLogController.log(
-            when (applies) {
-                true -> GDPR_APPLICABLE
-                false -> GDPR_NOT_APPLICABLE
-                else -> GDPR_UNKNOWN
-            },
-        )
-
-        PartnerLogController.log(
-            when (gdprConsentStatus) {
-                GdprConsentStatus.GDPR_CONSENT_UNKNOWN -> GDPR_CONSENT_UNKNOWN
-                GdprConsentStatus.GDPR_CONSENT_GRANTED -> GDPR_CONSENT_GRANTED
-                GdprConsentStatus.GDPR_CONSENT_DENIED -> GDPR_CONSENT_DENIED
-            },
-        )
-
-        if (applies == true) {
-            InneractiveAdManager.setGdprConsent(
-                gdprConsentStatus == GdprConsentStatus.GDPR_CONSENT_GRANTED,
-                InneractiveAdManager.GdprConsentSource.External,
-            )
-        } else {
-            InneractiveAdManager.clearGdprConsentData()
-        }
-    }
-
-    /**
-     * Notify Digital Turbine Exchange of the user's CCPA consent status, if applicable.
-     *
-     * @param context The current [Context].
-     * @param hasGrantedCcpaConsent True if the user has granted CCPA consent, false otherwise.
-     * @param privacyString The CCPA privacy string.
-     */
-    override fun setCcpaConsent(
-        context: Context,
-        hasGrantedCcpaConsent: Boolean,
-        privacyString: String,
-    ) {
-        PartnerLogController.log(
-            if (hasGrantedCcpaConsent) {
-                CCPA_CONSENT_GRANTED
-            } else {
-                CCPA_CONSENT_DENIED
-            },
-        )
-
-        InneractiveAdManager.setUSPrivacyString(privacyString)
-    }
-
-    /**
      * Notify Digital Turbine Exchange of the COPPA subjectivity.
      *
      * @param context The current [Context].
-     * @param isSubjectToCoppa True if the user is subject to COPPA, false otherwise.
+     * @param isUserUnderage True if the user is subject to COPPA, false otherwise.
      */
-    override fun setUserSubjectToCoppa(
+    override fun setIsUserUnderage(
         context: Context,
-        isSubjectToCoppa: Boolean,
+        isUserUnderage: Boolean,
     ) {
         PartnerLogController.log(
-            if (isSubjectToCoppa) {
-                COPPA_SUBJECT
+            if (isUserUnderage) {
+                USER_IS_UNDERAGE
             } else {
-                COPPA_NOT_SUBJECT
+                USER_IS_NOT_UNDERAGE
             },
         )
 
@@ -198,17 +160,17 @@ class partnerSdkVersionDigitalTurbineExchangeAdapter : PartnerAdapter {
      * Get a bid token if network bidding is supported.
      *
      * @param context The current [Context].
-     * @param request The [PreBidRequest] instance containing relevant data for the current bid request.
+     * @param request The [PartnerAdPreBidRequest] instance containing relevant data for the current bid request.
      *
      * @return A Map of biddable token Strings.
      */
     override suspend fun fetchBidderInformation(
         context: Context,
-        request: PreBidRequest,
-    ): Map<String, String> {
+        request: PartnerAdPreBidRequest,
+    ): Result<Map<String, String>> {
         PartnerLogController.log(BIDDER_INFO_FETCH_STARTED)
         PartnerLogController.log(BIDDER_INFO_FETCH_SUCCEEDED)
-        return emptyMap()
+        return Result.success(emptyMap())
     }
 
     /**
@@ -227,11 +189,11 @@ class partnerSdkVersionDigitalTurbineExchangeAdapter : PartnerAdapter {
     ): Result<PartnerAd> {
         PartnerLogController.log(LOAD_STARTED)
 
-        return when (request.format.key) {
-            AdFormat.BANNER.key, "adaptive_banner" -> {
+        return when (request.format) {
+            PartnerAdFormats.BANNER -> {
                 loadBannerAd(context, request, partnerAdListener)
             }
-            AdFormat.INTERSTITIAL.key, AdFormat.REWARDED.key -> {
+            PartnerAdFormats.INTERSTITIAL, PartnerAdFormats.REWARDED -> {
                 loadFullscreenAd(request, partnerAdListener)
             }
             else -> {
@@ -256,13 +218,13 @@ class partnerSdkVersionDigitalTurbineExchangeAdapter : PartnerAdapter {
         PartnerLogController.log(SHOW_STARTED)
         val listener = listeners.remove(partnerAd.request.identifier)
 
-        return when (partnerAd.request.format.key) {
+        return when (partnerAd.request.format) {
             // Banner ads do not have a separate "show" mechanism.
-            AdFormat.BANNER.key, "adaptive_banner" -> {
+            PartnerAdFormats.BANNER -> {
                 PartnerLogController.log(SHOW_SUCCEEDED)
                 Result.success(partnerAd)
             }
-            AdFormat.INTERSTITIAL.key, AdFormat.REWARDED.key ->
+            PartnerAdFormats.INTERSTITIAL, PartnerAdFormats.REWARDED ->
                 showFullscreenAd(
                     activity,
                     partnerAd,
@@ -289,6 +251,22 @@ class partnerSdkVersionDigitalTurbineExchangeAdapter : PartnerAdapter {
         return destroyAd(partnerAd)
     }
 
+    override fun setConsents(
+        context: Context,
+        consents: Map<ConsentKey, ConsentValue>,
+        modifiedKeys: Set<ConsentKey>
+    ) {
+        consents[ConsentKeys.TCF]?.let {
+            PartnerLogController.log(CUSTOM, "${PartnerLogController.PRIVACY_TAG} TCF String set")
+            InneractiveAdManager.setGdprConsentString(it)
+        }
+
+        consents[ConsentKeys.USP]?.let {
+            PartnerLogController.log(CUSTOM, "${PartnerLogController.PRIVACY_TAG} USP String: $it")
+            InneractiveAdManager.setUSPrivacyString(it)
+        }
+    }
+
     /**
      * Determine the corresponding [Result] for a given Digital Turbine Exchange init status.
      *
@@ -296,14 +274,15 @@ class partnerSdkVersionDigitalTurbineExchangeAdapter : PartnerAdapter {
      *
      * @return Result.success() if Digital Turbine Exchange was initialized successfully, Result.failure() otherwise.
      */
-    private fun getInitResult(status: OnFyberMarketplaceInitializedListener.FyberInitStatus): Result<Unit> {
+    private fun getInitResult(status: OnFyberMarketplaceInitializedListener.FyberInitStatus): Result<Map<String, Any>> {
         return when (status) {
             // Digital Turbine Exchange's failed init is recoverable. It will be re-attempted on
             // the first ad request.
             OnFyberMarketplaceInitializedListener.FyberInitStatus.SUCCESSFULLY,
             OnFyberMarketplaceInitializedListener.FyberInitStatus.FAILED,
             -> {
-                Result.success(PartnerLogController.log(SETUP_SUCCEEDED))
+                PartnerLogController.log(SETUP_SUCCEEDED)
+                Result.success(emptyMap())
             }
             OnFyberMarketplaceInitializedListener.FyberInitStatus.FAILED_NO_KITS_DETECTED -> {
                 PartnerLogController.log(SETUP_FAILED, "No kits detected.")
@@ -494,13 +473,12 @@ class partnerSdkVersionDigitalTurbineExchangeAdapter : PartnerAdapter {
      * @return True if the ad is ready to show, false otherwise.
      */
     private fun readyToShow(
-        format: AdFormat,
+        format: PartnerAdFormat,
         ad: Any?,
     ): Boolean {
         return when {
-            format == AdFormat.BANNER -> (ad is BannerView)
-            format.key == "adaptive_banner" -> (ad is BannerView)
-            format == AdFormat.INTERSTITIAL || format == AdFormat.REWARDED -> (ad as InneractiveAdSpot).isReady
+            format == PartnerAdFormats.BANNER -> (ad is BannerView)
+            format == PartnerAdFormats.INTERSTITIAL || format == PartnerAdFormats.REWARDED -> (ad as InneractiveAdSpot).isReady
             else -> false
         }
     }
