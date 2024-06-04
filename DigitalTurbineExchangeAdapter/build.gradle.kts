@@ -36,11 +36,11 @@ repositories {
 
 android {
     namespace = "com.chartboost.mediation.digitalturbineexchangeadapter"
-    compileSdk = 33
+    compileSdk = 34
 
     defaultConfig {
         minSdk = 21
-        targetSdk = 33
+        targetSdk = 34
         // If you touch the following line, don't forget to update scripts/get_rc_version.zsh
         android.defaultConfig.versionName = System.getenv("VERSION_OVERRIDE") ?: "5.8.2.7.0"
         buildConfigField(
