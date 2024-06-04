@@ -232,7 +232,7 @@ class DigitalTurbineExchangeAdapter : PartnerAdapter {
     override fun setConsents(
         context: Context,
         consents: Map<ConsentKey, ConsentValue>,
-        modifiedKeys: Set<ConsentKey>
+        modifiedKeys: Set<ConsentKey>,
     ) {
         consents[ConsentKeys.TCF]?.let {
             PartnerLogController.log(CUSTOM, "${PartnerLogController.PRIVACY_TAG} TCF String set")
