@@ -38,7 +38,7 @@ object DigitalTurbineExchangeAdapterConfiguration : PartnerAdapterConfiguration 
     /**
      * Flag that can optionally be set to mute video creatives served by Digital Turbine Exchange.
      */
-    var mute = false
+    var muteVideo = false
         set(value) {
             field = value
             InneractiveAdManager.setMuteVideo(value)
@@ -56,25 +56,25 @@ object DigitalTurbineExchangeAdapterConfiguration : PartnerAdapterConfiguration 
         }
 
     /**
-     * Set Digital Turbine Exchange's log level.
-     *
-     * @param level The log level to set. Must be one of the constants in Android's [Log] class.
+     * The Digital Turbine Exchange's log level. Recommended to be one of the constants in Android's [Log] class.
      */
-    fun setLogLevel(level: Int) {
-        InneractiveAdManager.setLogLevel(level)
-        PartnerLogController.log(
-            PartnerLogController.PartnerAdapterEvents.CUSTOM,
-            "Digital Turbine Exchange log level set to ${
-                when (level) {
-                    Log.VERBOSE -> "Log.VERBOSE"
-                    Log.DEBUG -> "Log.DEBUG"
-                    Log.INFO -> "Log.INFO"
-                    Log.WARN -> "Log.WARN"
-                    Log.ERROR -> "Log.ERROR"
-                    Log.ASSERT -> "Log.ASSERT"
-                    else -> "UNKNOWN"
-                }
-            }.",
-        )
-    }
+    var logLevel: Int = 0
+        set(value) {
+            field = value
+            InneractiveAdManager.setLogLevel(value)
+            PartnerLogController.log(
+                PartnerLogController.PartnerAdapterEvents.CUSTOM,
+                "Digital Turbine Exchange log level set to ${
+                    when (value) {
+                        Log.VERBOSE -> "Log.VERBOSE"
+                        Log.DEBUG -> "Log.DEBUG"
+                        Log.INFO -> "Log.INFO"
+                        Log.WARN -> "Log.WARN"
+                        Log.ERROR -> "Log.ERROR"
+                        Log.ASSERT -> "Log.ASSERT"
+                        else -> "UNKNOWN"
+                    }
+                }.",
+            )
+        }
 }
