@@ -37,6 +37,7 @@ import com.chartboost.chartboostmediationsdk.utils.PartnerLogController.PartnerA
 import com.chartboost.core.consent.ConsentKey
 import com.chartboost.core.consent.ConsentKeys
 import com.chartboost.core.consent.ConsentValue
+import com.chartboost.core.consent.ConsentValues
 import com.fyber.inneractive.sdk.external.*
 import com.fyber.inneractive.sdk.external.InneractiveAdSpot.RequestListener
 import com.fyber.inneractive.sdk.external.InneractiveUnitController.AdDisplayError
@@ -256,6 +257,25 @@ class DigitalTurbineExchangeAdapter : PartnerAdapter {
         consents: Map<ConsentKey, ConsentValue>,
         modifiedKeys: Set<ConsentKey>
     ) {
+        val consent = consents[configuration.partnerId]?.takeIf { it.isNotBlank() }
+            ?: consents[ConsentKeys.GDPR_CONSENT_GIVEN]?.takeIf { it.isNotBlank() }
+        consent?.let {
+            if (it == ConsentValues.DOES_NOT_APPLY) {
+                PartnerLogController.log(PartnerLogController.PartnerAdapterEvents.GDPR_NOT_APPLICABLE)
+                return@let
+            }
+
+            PartnerLogController.log(
+                when (it) {
+                    ConsentValues.GRANTED -> PartnerLogController.PartnerAdapterEvents.GDPR_CONSENT_GRANTED
+                    ConsentValues.DENIED -> PartnerLogController.PartnerAdapterEvents.GDPR_CONSENT_DENIED
+                    else -> PartnerLogController.PartnerAdapterEvents.GDPR_CONSENT_UNKNOWN
+                },
+            )
+
+            InneractiveAdManager.setGdprConsent(it == ConsentValues.GRANTED)
+        }
+
         consents[ConsentKeys.TCF]?.let {
             PartnerLogController.log(CUSTOM, "${PartnerLogController.PRIVACY_TAG} TCF String set")
             InneractiveAdManager.setGdprConsentString(it)
