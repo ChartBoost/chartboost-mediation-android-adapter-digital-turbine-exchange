@@ -5,15 +5,15 @@ The Chartboost Mediation Digital Turbine Exchange adapter mediates Digital Turbi
 ## Minimum Requirements
 
 | Plugin                   | Version |
-| ------------------------ | ------- |
-| Chartboost Mediation SDK | 4.0.0+  |
+| ------------------------ |---------|
+| Chartboost Mediation SDK | 5.0.0+  |
 | Android API              | 21+     |
 
 ## Integration
 
 In your `build.gradle`, add the following entry:
 ```
-    implementation "com.chartboost:chartboost-mediation-adapter-digital-turbine-exchange:4.8.3.0.0"
+    implementation "com.chartboost:chartboost-mediation-adapter-digital-turbine-exchange:5.8.3.0.0"
 ```
 
 ## Contributions

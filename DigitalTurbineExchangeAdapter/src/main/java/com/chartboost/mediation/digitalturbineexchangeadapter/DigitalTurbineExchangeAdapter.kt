@@ -1,6 +1,6 @@
 /*
  * Copyright 2023-2024 Chartboost, Inc.
- * 
+ *
  * Use of this source code is governed by an MIT-style
  * license that can be found in the LICENSE file.
  */
@@ -9,12 +9,35 @@ package com.chartboost.mediation.digitalturbineexchangeadapter
 
 import android.app.Activity
 import android.content.Context
-import android.util.Log
 import android.widget.FrameLayout
-import com.chartboost.heliumsdk.HeliumSdk
-import com.chartboost.heliumsdk.domain.*
-import com.chartboost.heliumsdk.utils.PartnerLogController
-import com.chartboost.heliumsdk.utils.PartnerLogController.PartnerAdapterEvents.*
+import com.chartboost.chartboostmediationsdk.ChartboostMediationSdk
+import com.chartboost.chartboostmediationsdk.domain.*
+import com.chartboost.chartboostmediationsdk.utils.PartnerLogController
+import com.chartboost.chartboostmediationsdk.utils.PartnerLogController.PartnerAdapterEvents.BIDDER_INFO_FETCH_STARTED
+import com.chartboost.chartboostmediationsdk.utils.PartnerLogController.PartnerAdapterEvents.BIDDER_INFO_FETCH_SUCCEEDED
+import com.chartboost.chartboostmediationsdk.utils.PartnerLogController.PartnerAdapterEvents.CUSTOM
+import com.chartboost.chartboostmediationsdk.utils.PartnerLogController.PartnerAdapterEvents.DID_CLICK
+import com.chartboost.chartboostmediationsdk.utils.PartnerLogController.PartnerAdapterEvents.DID_DISMISS
+import com.chartboost.chartboostmediationsdk.utils.PartnerLogController.PartnerAdapterEvents.DID_REWARD
+import com.chartboost.chartboostmediationsdk.utils.PartnerLogController.PartnerAdapterEvents.DID_TRACK_IMPRESSION
+import com.chartboost.chartboostmediationsdk.utils.PartnerLogController.PartnerAdapterEvents.INVALIDATE_FAILED
+import com.chartboost.chartboostmediationsdk.utils.PartnerLogController.PartnerAdapterEvents.INVALIDATE_STARTED
+import com.chartboost.chartboostmediationsdk.utils.PartnerLogController.PartnerAdapterEvents.INVALIDATE_SUCCEEDED
+import com.chartboost.chartboostmediationsdk.utils.PartnerLogController.PartnerAdapterEvents.LOAD_FAILED
+import com.chartboost.chartboostmediationsdk.utils.PartnerLogController.PartnerAdapterEvents.LOAD_STARTED
+import com.chartboost.chartboostmediationsdk.utils.PartnerLogController.PartnerAdapterEvents.LOAD_SUCCEEDED
+import com.chartboost.chartboostmediationsdk.utils.PartnerLogController.PartnerAdapterEvents.SETUP_FAILED
+import com.chartboost.chartboostmediationsdk.utils.PartnerLogController.PartnerAdapterEvents.SETUP_STARTED
+import com.chartboost.chartboostmediationsdk.utils.PartnerLogController.PartnerAdapterEvents.SETUP_SUCCEEDED
+import com.chartboost.chartboostmediationsdk.utils.PartnerLogController.PartnerAdapterEvents.SHOW_FAILED
+import com.chartboost.chartboostmediationsdk.utils.PartnerLogController.PartnerAdapterEvents.SHOW_STARTED
+import com.chartboost.chartboostmediationsdk.utils.PartnerLogController.PartnerAdapterEvents.SHOW_SUCCEEDED
+import com.chartboost.chartboostmediationsdk.utils.PartnerLogController.PartnerAdapterEvents.USER_IS_NOT_UNDERAGE
+import com.chartboost.chartboostmediationsdk.utils.PartnerLogController.PartnerAdapterEvents.USER_IS_UNDERAGE
+import com.chartboost.core.consent.ConsentKey
+import com.chartboost.core.consent.ConsentKeys
+import com.chartboost.core.consent.ConsentValue
+import com.chartboost.core.consent.ConsentValues
 import com.fyber.inneractive.sdk.external.*
 import com.fyber.inneractive.sdk.external.InneractiveAdSpot.RequestListener
 import com.fyber.inneractive.sdk.external.InneractiveUnitController.AdDisplayError
@@ -34,49 +57,6 @@ import kotlin.coroutines.resume
 class DigitalTurbineExchangeAdapter : PartnerAdapter {
     companion object {
         /**
-         * Flag that can optionally be set to mute video creatives served by Digital Turbine Exchange.
-         */
-        public var mute = false
-            set(value) {
-                field = value
-                InneractiveAdManager.setMuteVideo(value)
-                PartnerLogController.log(
-                    CUSTOM,
-                    "Digital Turbine Exchange video creatives will be " +
-                        "${
-                            if (value) {
-                                "muted"
-                            } else {
-                                "unmuted"
-                            }
-                        }.",
-                )
-            }
-
-        /**
-         * Set Digital Turbine Exchange's log level.
-         *
-         * @param level The log level to set. Must be one of the constants in Android's [Log] class.
-         */
-        fun setLogLevel(level: Int) {
-            InneractiveAdManager.setLogLevel(level)
-            PartnerLogController.log(
-                CUSTOM,
-                "Digital Turbine Exchange log level set to ${
-                    when (level) {
-                        Log.VERBOSE -> "Log.VERBOSE"
-                        Log.DEBUG -> "Log.DEBUG"
-                        Log.INFO -> "Log.INFO"
-                        Log.WARN -> "Log.WARN"
-                        Log.ERROR -> "Log.ERROR"
-                        Log.ASSERT -> "Log.ASSERT"
-                        else -> "UNKNOWN"
-                    }
-                }.",
-            )
-        }
-
-        /**
          * Key for parsing the Digital Turbine Exchange app ID.
          */
         private const val APP_ID_KEY = "fyber_app_id"
@@ -95,53 +75,25 @@ class DigitalTurbineExchangeAdapter : PartnerAdapter {
          */
         private fun getChartboostMediationError(error: InneractiveErrorCode?) =
             when (error) {
-                InneractiveErrorCode.NO_FILL -> ChartboostMediationError.CM_LOAD_FAILURE_NO_FILL
-                InneractiveErrorCode.CONNECTION_ERROR -> ChartboostMediationError.CM_NO_CONNECTIVITY
-                InneractiveErrorCode.SERVER_INTERNAL_ERROR -> ChartboostMediationError.CM_AD_SERVER_ERROR
-                InneractiveErrorCode.SERVER_INVALID_RESPONSE -> ChartboostMediationError.CM_LOAD_FAILURE_INVALID_BID_RESPONSE
-                InneractiveErrorCode.LOAD_TIMEOUT -> ChartboostMediationError.CM_LOAD_FAILURE_TIMEOUT
-                InneractiveErrorCode.ERROR_CODE_NATIVE_VIDEO_NOT_SUPPORTED -> ChartboostMediationError.CM_LOAD_FAILURE_MISMATCHED_AD_FORMAT
-                else -> ChartboostMediationError.CM_PARTNER_ERROR
+                InneractiveErrorCode.NO_FILL -> ChartboostMediationError.LoadError.NoFill
+                InneractiveErrorCode.CONNECTION_ERROR -> ChartboostMediationError.OtherError.NoConnectivity
+                InneractiveErrorCode.SERVER_INTERNAL_ERROR -> ChartboostMediationError.LoadError.ServerError
+                InneractiveErrorCode.SERVER_INVALID_RESPONSE -> ChartboostMediationError.LoadError.InvalidBidResponse
+                InneractiveErrorCode.LOAD_TIMEOUT -> ChartboostMediationError.LoadError.AdRequestTimeout
+                InneractiveErrorCode.ERROR_CODE_NATIVE_VIDEO_NOT_SUPPORTED -> ChartboostMediationError.LoadError.MismatchedAdFormat
+                else -> ChartboostMediationError.OtherError.PartnerError
             }
     }
+
+    /**
+     * The Digital Turbine Exchange adapter configuration.
+     */
+    override var configuration: PartnerAdapterConfiguration = DigitalTurbineExchangeAdapterConfiguration
 
     /**
      * A map of Chartboost Mediation's listeners for the corresponding load identifier.
      */
     private val listeners = mutableMapOf<String, PartnerAdListener>()
-
-    /**
-     * Get the Digital Turbine Exchange SDK version.
-     */
-    override val partnerSdkVersion: String
-        get() = InneractiveAdManager.getVersion()
-
-    /**
-     * Get the Digital Turbine Exchange adapter version.
-     *
-     * You may version the adapter using any preferred convention, but it is recommended to apply the
-     * following format if the adapter will be published by Chartboost Mediation:
-     *
-     * Chartboost Mediation.Partner.Adapter
-     *
-     * "Chartboost Mediation" represents the Chartboost Mediation SDK’s major version that is compatible with this adapter. This must be 1 digit.
-     * "Partner" represents the partner SDK’s major.minor.patch.x (where x is optional) version that is compatible with this adapter. This can be 3-4 digits.
-     * "Adapter" represents this adapter’s version (starting with 0), which resets to 0 when the partner SDK’s version changes. This must be 1 digit.
-     */
-    override val adapterVersion: String
-        get() = BuildConfig.CHARTBOOST_MEDIATION_DIGITAL_TURBINE_EXCHANGE_ADAPTER_VERSION
-
-    /**
-     * Get the partner name for internal uses.
-     */
-    override val partnerId: String
-        get() = "fyber"
-
-    /**
-     * Get the partner name for external uses.
-     */
-    override val partnerDisplayName: String
-        get() = "Digital Turbine Exchange"
 
     /**
      * Initialize the Digital Turbine Exchange SDK so that it is ready to request ads.
@@ -154,11 +106,11 @@ class DigitalTurbineExchangeAdapter : PartnerAdapter {
     override suspend fun setUp(
         context: Context,
         partnerConfiguration: PartnerConfiguration,
-    ): Result<Unit> = withContext(IO) {
+    ): Result<Map<String, Any>> = withContext(IO) {
         PartnerLogController.log(SETUP_STARTED)
 
-        return@withContext suspendCancellableCoroutine { continuation ->
-            fun resumeOnce(result: Result<Unit>) {
+        suspendCancellableCoroutine { continuation ->
+            fun resumeOnce(result: Result<Map<String, Any>>) {
                 if (continuation.isActive) {
                     continuation.resume(result)
                 }
@@ -178,88 +130,27 @@ class DigitalTurbineExchangeAdapter : PartnerAdapter {
                 } ?: run {
                 PartnerLogController.log(SETUP_FAILED, "Missing app ID.")
                 resumeOnce(
-                    Result.failure(ChartboostMediationAdException(ChartboostMediationError.CM_INITIALIZATION_FAILURE_INVALID_CREDENTIALS)),
+                    Result.failure(ChartboostMediationAdException(ChartboostMediationError.InitializationError.InvalidCredentials)),
                 )
             }
         }
     }
 
     /**
-     * Notify the Digital Turbine Exchange SDK of the GDPR applicability and consent status.
-     *
-     * @param context The current [Context].
-     * @param applies True if GDPR applies, false otherwise.
-     * @param gdprConsentStatus The user's GDPR consent status.
-     */
-    override fun setGdpr(
-        context: Context,
-        applies: Boolean?,
-        gdprConsentStatus: GdprConsentStatus,
-    ) {
-        PartnerLogController.log(
-            when (applies) {
-                true -> GDPR_APPLICABLE
-                false -> GDPR_NOT_APPLICABLE
-                else -> GDPR_UNKNOWN
-            },
-        )
-
-        PartnerLogController.log(
-            when (gdprConsentStatus) {
-                GdprConsentStatus.GDPR_CONSENT_UNKNOWN -> GDPR_CONSENT_UNKNOWN
-                GdprConsentStatus.GDPR_CONSENT_GRANTED -> GDPR_CONSENT_GRANTED
-                GdprConsentStatus.GDPR_CONSENT_DENIED -> GDPR_CONSENT_DENIED
-            },
-        )
-
-        if (applies == true) {
-            InneractiveAdManager.setGdprConsent(
-                gdprConsentStatus == GdprConsentStatus.GDPR_CONSENT_GRANTED,
-                InneractiveAdManager.GdprConsentSource.External,
-            )
-        } else {
-            InneractiveAdManager.clearGdprConsentData()
-        }
-    }
-
-    /**
-     * Notify Digital Turbine Exchange of the user's CCPA consent status, if applicable.
-     *
-     * @param context The current [Context].
-     * @param hasGrantedCcpaConsent True if the user has granted CCPA consent, false otherwise.
-     * @param privacyString The CCPA privacy string.
-     */
-    override fun setCcpaConsent(
-        context: Context,
-        hasGrantedCcpaConsent: Boolean,
-        privacyString: String,
-    ) {
-        PartnerLogController.log(
-            if (hasGrantedCcpaConsent) {
-                CCPA_CONSENT_GRANTED
-            } else {
-                CCPA_CONSENT_DENIED
-            },
-        )
-
-        InneractiveAdManager.setUSPrivacyString(privacyString)
-    }
-
-    /**
      * Notify Digital Turbine Exchange of the COPPA subjectivity.
      *
      * @param context The current [Context].
-     * @param isSubjectToCoppa True if the user is subject to COPPA, false otherwise.
+     * @param isUserUnderage True if the user is subject to COPPA, false otherwise.
      */
-    override fun setUserSubjectToCoppa(
+    override fun setIsUserUnderage(
         context: Context,
-        isSubjectToCoppa: Boolean,
+        isUserUnderage: Boolean,
     ) {
         PartnerLogController.log(
-            if (isSubjectToCoppa) {
-                COPPA_SUBJECT
+            if (isUserUnderage) {
+                USER_IS_UNDERAGE
             } else {
-                COPPA_NOT_SUBJECT
+                USER_IS_NOT_UNDERAGE
             },
         )
 
@@ -270,17 +161,17 @@ class DigitalTurbineExchangeAdapter : PartnerAdapter {
      * Get a bid token if network bidding is supported.
      *
      * @param context The current [Context].
-     * @param request The [PreBidRequest] instance containing relevant data for the current bid request.
+     * @param request The [PartnerAdPreBidRequest] instance containing relevant data for the current bid request.
      *
      * @return A Map of biddable token Strings.
      */
     override suspend fun fetchBidderInformation(
         context: Context,
-        request: PreBidRequest,
-    ): Map<String, String> {
+        request: PartnerAdPreBidRequest,
+    ): Result<Map<String, String>> {
         PartnerLogController.log(BIDDER_INFO_FETCH_STARTED)
         PartnerLogController.log(BIDDER_INFO_FETCH_SUCCEEDED)
-        return emptyMap()
+        return Result.success(emptyMap())
     }
 
     /**
@@ -299,16 +190,16 @@ class DigitalTurbineExchangeAdapter : PartnerAdapter {
     ): Result<PartnerAd> {
         PartnerLogController.log(LOAD_STARTED)
 
-        return when (request.format.key) {
-            AdFormat.BANNER.key, "adaptive_banner" -> {
+        return when (request.format) {
+            PartnerAdFormats.BANNER -> {
                 loadBannerAd(context, request, partnerAdListener)
             }
-            AdFormat.INTERSTITIAL.key, AdFormat.REWARDED.key -> {
+            PartnerAdFormats.INTERSTITIAL, PartnerAdFormats.REWARDED -> {
                 loadFullscreenAd(request, partnerAdListener)
             }
             else -> {
                 PartnerLogController.log(LOAD_FAILED)
-                Result.failure(ChartboostMediationAdException(ChartboostMediationError.CM_LOAD_FAILURE_UNSUPPORTED_AD_FORMAT))
+                Result.failure(ChartboostMediationAdException(ChartboostMediationError.LoadError.UnsupportedAdFormat))
             }
         }
     }
@@ -316,33 +207,33 @@ class DigitalTurbineExchangeAdapter : PartnerAdapter {
     /**
      * Attempt to show the currently loaded Digital Turbine Exchange ad.
      *
-     * @param context The current [Context]
+     * @param activity The current [Activity]
      * @param partnerAd The [PartnerAd] object containing the ad to be shown.
      *
      * @return Result.success(PartnerAd) if the ad was successfully shown, Result.failure(Exception) otherwise.
      */
     override suspend fun show(
-        context: Context,
+        activity: Activity,
         partnerAd: PartnerAd,
     ): Result<PartnerAd> {
         PartnerLogController.log(SHOW_STARTED)
         val listener = listeners.remove(partnerAd.request.identifier)
 
-        return when (partnerAd.request.format.key) {
+        return when (partnerAd.request.format) {
             // Banner ads do not have a separate "show" mechanism.
-            AdFormat.BANNER.key, "adaptive_banner" -> {
+            PartnerAdFormats.BANNER -> {
                 PartnerLogController.log(SHOW_SUCCEEDED)
                 Result.success(partnerAd)
             }
-            AdFormat.INTERSTITIAL.key, AdFormat.REWARDED.key ->
+            PartnerAdFormats.INTERSTITIAL, PartnerAdFormats.REWARDED ->
                 showFullscreenAd(
-                    context,
+                    activity,
                     partnerAd,
                     listener,
                 )
             else -> {
                 PartnerLogController.log(SHOW_FAILED)
-                Result.failure(ChartboostMediationAdException(ChartboostMediationError.CM_SHOW_FAILURE_UNSUPPORTED_AD_FORMAT))
+                Result.failure(ChartboostMediationAdException(ChartboostMediationError.ShowError.UnsupportedAdFormat))
             }
         }
     }
@@ -361,6 +252,41 @@ class DigitalTurbineExchangeAdapter : PartnerAdapter {
         return destroyAd(partnerAd)
     }
 
+    override fun setConsents(
+        context: Context,
+        consents: Map<ConsentKey, ConsentValue>,
+        modifiedKeys: Set<ConsentKey>
+    ) {
+        val consent = consents[configuration.partnerId]?.takeIf { it.isNotBlank() }
+            ?: consents[ConsentKeys.GDPR_CONSENT_GIVEN]?.takeIf { it.isNotBlank() }
+        consent?.let {
+            if (it == ConsentValues.DOES_NOT_APPLY) {
+                PartnerLogController.log(PartnerLogController.PartnerAdapterEvents.GDPR_NOT_APPLICABLE)
+                return@let
+            }
+
+            PartnerLogController.log(
+                when (it) {
+                    ConsentValues.GRANTED -> PartnerLogController.PartnerAdapterEvents.GDPR_CONSENT_GRANTED
+                    ConsentValues.DENIED -> PartnerLogController.PartnerAdapterEvents.GDPR_CONSENT_DENIED
+                    else -> PartnerLogController.PartnerAdapterEvents.GDPR_CONSENT_UNKNOWN
+                },
+            )
+
+            InneractiveAdManager.setGdprConsent(it == ConsentValues.GRANTED)
+        }
+
+        consents[ConsentKeys.TCF]?.let {
+            PartnerLogController.log(CUSTOM, "${PartnerLogController.PRIVACY_TAG} TCF String set")
+            InneractiveAdManager.setGdprConsentString(it)
+        }
+
+        consents[ConsentKeys.USP]?.let {
+            PartnerLogController.log(CUSTOM, "${PartnerLogController.PRIVACY_TAG} USP String: $it")
+            InneractiveAdManager.setUSPrivacyString(it)
+        }
+    }
+
     /**
      * Determine the corresponding [Result] for a given Digital Turbine Exchange init status.
      *
@@ -368,22 +294,23 @@ class DigitalTurbineExchangeAdapter : PartnerAdapter {
      *
      * @return Result.success() if Digital Turbine Exchange was initialized successfully, Result.failure() otherwise.
      */
-    private fun getInitResult(status: OnFyberMarketplaceInitializedListener.FyberInitStatus): Result<Unit> {
+    private fun getInitResult(status: OnFyberMarketplaceInitializedListener.FyberInitStatus): Result<Map<String, Any>> {
         return when (status) {
             // Digital Turbine Exchange's failed init is recoverable. It will be re-attempted on
             // the first ad request.
             OnFyberMarketplaceInitializedListener.FyberInitStatus.SUCCESSFULLY,
             OnFyberMarketplaceInitializedListener.FyberInitStatus.FAILED,
             -> {
-                Result.success(PartnerLogController.log(SETUP_SUCCEEDED))
+                PartnerLogController.log(SETUP_SUCCEEDED)
+                Result.success(emptyMap())
             }
             OnFyberMarketplaceInitializedListener.FyberInitStatus.FAILED_NO_KITS_DETECTED -> {
                 PartnerLogController.log(SETUP_FAILED, "No kits detected.")
-                Result.failure(ChartboostMediationAdException(ChartboostMediationError.CM_INITIALIZATION_FAILURE_UNKNOWN))
+                Result.failure(ChartboostMediationAdException(ChartboostMediationError.InitializationError.Unknown))
             }
             OnFyberMarketplaceInitializedListener.FyberInitStatus.INVALID_APP_ID -> {
                 PartnerLogController.log(SETUP_FAILED, "Invalid app ID.")
-                Result.failure(ChartboostMediationAdException(ChartboostMediationError.CM_INITIALIZATION_FAILURE_INVALID_CREDENTIALS))
+                Result.failure(ChartboostMediationAdException(ChartboostMediationError.InitializationError.InvalidCredentials))
             }
         }
     }
@@ -407,7 +334,7 @@ class DigitalTurbineExchangeAdapter : PartnerAdapter {
 
         adSpot.addUnitController(unitController)
         adSpot.setMediationName(MEDIATOR_NAME)
-        adSpot.mediationVersion = HeliumSdk.getVersion()
+        adSpot.mediationVersion = ChartboostMediationSdk.getVersion()
 
         return suspendCancellableCoroutine { continuation ->
             adSpot.setRequestListener(
@@ -428,7 +355,7 @@ class DigitalTurbineExchangeAdapter : PartnerAdapter {
 
                                 Result.failure(
                                     ChartboostMediationAdException(
-                                        ChartboostMediationError.CM_LOAD_FAILURE_MISMATCHED_AD_PARAMS,
+                                        ChartboostMediationError.LoadError.MismatchedAdFormat,
                                     ),
                                 )
                             } else {
@@ -543,7 +470,7 @@ class DigitalTurbineExchangeAdapter : PartnerAdapter {
         unitController.addContentController(videoController)
         videoSpot.addUnitController(unitController)
         videoSpot.setMediationName(MEDIATOR_NAME)
-        videoSpot.mediationVersion = adapterVersion
+        videoSpot.mediationVersion = configuration.adapterVersion
 
         return suspendCancellableCoroutine { continuation ->
             videoSpot.setRequestListener(
@@ -560,25 +487,18 @@ class DigitalTurbineExchangeAdapter : PartnerAdapter {
     /**
      * Determine if a Digital Turbine Exchange ad is ready to show.
      *
-     * @param context The current [Context].
      * @param format The format of the ad to be shown.
      * @param ad The generic Digital Turbine Exchange ad object.
      *
      * @return True if the ad is ready to show, false otherwise.
      */
     private fun readyToShow(
-        context: Context,
-        format: AdFormat,
+        format: PartnerAdFormat,
         ad: Any?,
     ): Boolean {
         return when {
-            context !is Activity -> {
-                PartnerLogController.log(SHOW_FAILED, "Context is not an activity.")
-                false
-            }
-            format == AdFormat.BANNER -> (ad is BannerView)
-            format.key == "adaptive_banner" -> (ad is BannerView)
-            format == AdFormat.INTERSTITIAL || format == AdFormat.REWARDED -> (ad as InneractiveAdSpot).isReady
+            format == PartnerAdFormats.BANNER -> (ad is BannerView)
+            format == PartnerAdFormats.INTERSTITIAL || format == PartnerAdFormats.REWARDED -> (ad as InneractiveAdSpot).isReady
             else -> false
         }
     }
@@ -586,26 +506,26 @@ class DigitalTurbineExchangeAdapter : PartnerAdapter {
     /**
      * Attempt to show a Digital Turbine Exchange fullscreen ad.
      *
-     * @param context The current [Context].
+     * @param activity The current [Activity].
      * @param partnerAd The [PartnerAd] object containing the Digital Turbine Exchange ad to be shown.
      * @param listener A [PartnerAdListener] to notify Chartboost Mediation of ad events.
      *
      * @return Result.success(PartnerAd) if the ad was successfully shown, Result.failure(Exception) otherwise.
      */
     private suspend fun showFullscreenAd(
-        context: Context,
+        activity: Activity,
         partnerAd: PartnerAd,
         listener: PartnerAdListener?,
     ): Result<PartnerAd> {
-        if (!readyToShow(context, partnerAd.request.format, partnerAd.ad)) {
+        if (!readyToShow(partnerAd.request.format, partnerAd.ad)) {
             PartnerLogController.log(SHOW_FAILED, "Ad is not ready.")
-            return Result.failure(ChartboostMediationAdException(ChartboostMediationError.CM_SHOW_FAILURE_AD_NOT_READY))
+            return Result.failure(ChartboostMediationAdException(ChartboostMediationError.ShowError.AdNotReady))
         }
 
         (partnerAd.ad as? InneractiveAdSpot)?.let { adSpot ->
             val controller =
                 adSpot.selectedUnitController as? InneractiveFullscreenUnitController
-                    ?: return Result.failure(ChartboostMediationAdException(ChartboostMediationError.CM_SHOW_FAILURE_WRONG_RESOURCE_TYPE))
+                    ?: return Result.failure(ChartboostMediationAdException(ChartboostMediationError.ShowError.WrongResourceType))
 
             return suspendCancellableCoroutine { continuation ->
                 controller.eventsListener =
@@ -625,11 +545,11 @@ class DigitalTurbineExchangeAdapter : PartnerAdapter {
                         )
                     }
 
-                controller.show(context as Activity)
+                controller.show(activity)
             }
         } ?: run {
             PartnerLogController.log(SHOW_FAILED, "Ad is not an InneractiveAdSpot.")
-            return Result.failure(ChartboostMediationAdException(ChartboostMediationError.CM_SHOW_FAILURE_WRONG_RESOURCE_TYPE))
+            return Result.failure(ChartboostMediationAdException(ChartboostMediationError.ShowError.WrongResourceType))
         }
     }
 
@@ -655,7 +575,7 @@ class DigitalTurbineExchangeAdapter : PartnerAdapter {
                         "Ad is neither a BannerView nor an InneractiveAdSpot.",
                     )
                     return Result.failure(
-                        ChartboostMediationAdException(ChartboostMediationError.CM_INVALIDATE_FAILURE_WRONG_RESOURCE_TYPE),
+                        ChartboostMediationAdException(ChartboostMediationError.InvalidateError.WrongResourceType),
                     )
                 }
             }
@@ -664,7 +584,7 @@ class DigitalTurbineExchangeAdapter : PartnerAdapter {
             Result.success(partnerAd)
         } ?: run {
             PartnerLogController.log(INVALIDATE_FAILED, "Ad is null.")
-            Result.failure(ChartboostMediationAdException(ChartboostMediationError.CM_INVALIDATE_FAILURE_AD_NOT_FOUND))
+            Result.failure(ChartboostMediationAdException(ChartboostMediationError.InvalidateError.AdNotFound))
         }
     }
 
@@ -790,7 +710,7 @@ class DigitalTurbineExchangeAdapter : PartnerAdapter {
             error: AdDisplayError,
         ) {
             PartnerLogController.log(SHOW_FAILED, "Error: $error")
-            resumeOnce(Result.failure(ChartboostMediationAdException(ChartboostMediationError.CM_SHOW_FAILURE_UNKNOWN)))
+            resumeOnce(Result.failure(ChartboostMediationAdException(ChartboostMediationError.ShowError.Unknown)))
 
             ad.destroy()
         }
