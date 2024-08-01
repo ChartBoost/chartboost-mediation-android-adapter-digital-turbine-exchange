@@ -75,13 +75,13 @@ class DigitalTurbineExchangeAdapter : PartnerAdapter {
          */
         private fun getChartboostMediationError(error: InneractiveErrorCode?) =
             when (error) {
-                InneractiveErrorCode.NO_FILL -> ChartboostMediationError.CM_LOAD_FAILURE_NO_FILL
-                InneractiveErrorCode.CONNECTION_ERROR -> ChartboostMediationError.CM_NO_CONNECTIVITY
-                InneractiveErrorCode.SERVER_INTERNAL_ERROR -> ChartboostMediationError.CM_AD_SERVER_ERROR
-                InneractiveErrorCode.SERVER_INVALID_RESPONSE -> ChartboostMediationError.CM_LOAD_FAILURE_INVALID_BID_RESPONSE
-                InneractiveErrorCode.LOAD_TIMEOUT -> ChartboostMediationError.CM_LOAD_FAILURE_TIMEOUT
-                InneractiveErrorCode.ERROR_CODE_NATIVE_VIDEO_NOT_SUPPORTED -> ChartboostMediationError.CM_LOAD_FAILURE_MISMATCHED_AD_FORMAT
-                else -> ChartboostMediationError.CM_PARTNER_ERROR
+                InneractiveErrorCode.NO_FILL -> ChartboostMediationError.LoadError.NoFill
+                InneractiveErrorCode.CONNECTION_ERROR -> ChartboostMediationError.OtherError.NoConnectivity
+                InneractiveErrorCode.SERVER_INTERNAL_ERROR -> ChartboostMediationError.LoadError.ServerError
+                InneractiveErrorCode.SERVER_INVALID_RESPONSE -> ChartboostMediationError.LoadError.InvalidBidResponse
+                InneractiveErrorCode.LOAD_TIMEOUT -> ChartboostMediationError.LoadError.AdRequestTimeout
+                InneractiveErrorCode.ERROR_CODE_NATIVE_VIDEO_NOT_SUPPORTED -> ChartboostMediationError.LoadError.MismatchedAdFormat
+                else -> ChartboostMediationError.OtherError.PartnerError
             }
     }
 
@@ -710,7 +710,7 @@ class DigitalTurbineExchangeAdapter : PartnerAdapter {
             error: AdDisplayError,
         ) {
             PartnerLogController.log(SHOW_FAILED, "Error: $error")
-            resumeOnce(Result.failure(ChartboostMediationAdException(ChartboostMediationError.CM_SHOW_FAILURE_UNKNOWN)))
+            resumeOnce(Result.failure(ChartboostMediationAdException(ChartboostMediationError.ShowError.Unknown)))
 
             ad.destroy()
         }
