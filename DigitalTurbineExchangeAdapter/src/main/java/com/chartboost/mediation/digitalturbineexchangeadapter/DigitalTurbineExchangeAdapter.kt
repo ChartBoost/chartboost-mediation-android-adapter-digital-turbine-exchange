@@ -109,7 +109,7 @@ class DigitalTurbineExchangeAdapter : PartnerAdapter {
     ): Result<Map<String, Any>> = withContext(IO) {
         PartnerLogController.log(SETUP_STARTED)
 
-        return@withContext suspendCancellableCoroutine { continuation ->
+        suspendCancellableCoroutine { continuation ->
             fun resumeOnce(result: Result<Map<String, Any>>) {
                 if (continuation.isActive) {
                     continuation.resume(result)
