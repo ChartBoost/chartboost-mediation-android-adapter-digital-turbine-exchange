@@ -42,7 +42,7 @@ android {
         minSdk = 21
         targetSdk = 34
         // If you touch the following line, don't forget to update scripts/get_rc_version.zsh
-        android.defaultConfig.versionName = System.getenv("VERSION_OVERRIDE") ?: "5.8.4.0.0"
+        android.defaultConfig.versionName = System.getenv("VERSION_OVERRIDE") ?: "5.8.4.1.0"
         buildConfigField(
             "String",
             "CHARTBOOST_MEDIATION_DIGITAL_TURBINE_EXCHANGE_ADAPTER_VERSION",
@@ -93,7 +93,7 @@ dependencies {
     "candidateImplementation"("com.chartboost:chartboost-mediation-sdk:5.0.0")
 
     // Partner SDK
-    implementation("com.fyber:marketplace-sdk:8.4.0")
+    implementation("com.fyber:marketplace-sdk:8.4.1")
 
     // Adapter Dependencies
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.6.4")
