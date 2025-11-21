@@ -11,6 +11,9 @@ All official releases can be found on this repository's [releases page](https://
 
 ## Mediation 5
 
+### 5.8.4.1.0
+- This version of the adapter has been certified with Digital Turbine Exchange SDK 8.4.1.
+
 ### 5.8.4.0.0
 - This version of the adapter has been certified with Digital Turbine Exchange SDK 8.4.0.
 

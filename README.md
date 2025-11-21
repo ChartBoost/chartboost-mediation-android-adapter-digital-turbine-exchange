@@ -13,7 +13,7 @@ The Chartboost Mediation Digital Turbine Exchange adapter mediates Digital Turbi
 
 In your `build.gradle`, add the following entry:
 ```
-    implementation "com.chartboost:chartboost-mediation-adapter-digital-turbine-exchange:5.8.4.0.0"
+    implementation "com.chartboost:chartboost-mediation-adapter-digital-turbine-exchange:5.8.4.1.0"
 ```
 
 ## Contributions
